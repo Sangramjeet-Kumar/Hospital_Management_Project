@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - PulsePoint</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <span class="plus-sign">+</span>PulsePoint
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-tab="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li data-tab="appointments">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Appointments</span>
+                </li>
+                <li data-tab="patients">
+                    <i class="fas fa-users"></i>
+                    <span>Patients</span>
+                </li>
+                <li data-tab="doctors">
+                    <i class="fas fa-user-md"></i>
+                    <span>Doctors</span>
+                </li>
+                <li data-tab="departments">
+                    <i class="fas fa-hospital"></i>
+                    <span>Departments</span>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <a href="index.html" class="home-link">
+                    <i class="fas fa-home"></i>
+                    <span>Back to Home</span>
+                </a>
+                <button class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search...">
+                </div>
+                <div class="admin-profile">
+                    <span class="admin-name">Admin User</span>
+                    <img src="https://via.placeholder.com/40" alt="Admin" class="admin-avatar">
+                </div>
+            </div>
+
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section active">
+                <h1>Dashboard Overview</h1>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Total Appointments</h3>
+                            <p id="totalAppointments">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Total Patients</h3>
+                            <p id="totalPatients">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Total Doctors</h3>
+                            <p id="totalDoctors">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Completed Appointments</h3>
+                            <p id="completedAppointments">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Recent Activity</h3>
+                        <div class="activity-list">
+                            <!-- Activity items will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Appointments Section -->
+            <section id="appointments" class="content-section">
+                <h1>Appointments Management</h1>
+                <div class="filters-section">
+                    <div class="date-filter">
+                        <label for="dateRange">View Appointments:</label>
+                        <select id="dateRange" class="date-select">
+                            <option value="past">Past Appointments</option>
+                            <option value="today">Today's Appointments</option>
+                            <option value="week" selected>Next 7 Days</option>
+                            <option value="month">Next 30 Days</option>
+                            <option value="all">All Appointments</option>
+                        </select>
+                    </div>
+                    <div class="search-filter">
+                        <input type="text" id="searchInput" placeholder="Search appointments...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <!-- Appointments table will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Patients Section -->
+            <section id="patients" class="content-section">
+                <h1>Patient Records</h1>
+                <div class="filters-section">
+                    <div class="search-filter">
+                        <input type="text" id="patientSearch" placeholder="Search patients...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <button class="add-btn">
+                        <i class="fas fa-plus"></i>
+                        Add New Patient
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Contact</th>
+                                <th>Email</th>
+                                <th>Gender</th>
+                                <th>Last Visit</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsTableBody">
+                            <!-- Patient records will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html> 

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Appointment - PulsePoint</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="appointment.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="glass-nav">
+        <a href="index.html" class="logo"><span class="plus-sign">+</span>PulsePoint</a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+        </ul>
+    </nav>
+
+    <main class="appointment-page">
+        <div class="booking-container">
+            <!-- Step 1: Department and Doctor Selection -->
+            <section class="booking-section" id="doctorSelection">
+                <h2>Book Your Appointment</h2>
+                
+                <!-- Department Selection -->
+                <div class="department-selector">
+                    <h3>Select Department</h3>
+                    <div class="department-grid">
+                        <div class="department-card" data-department="Cardiology">
+                            <i class="fas fa-heartbeat"></i>
+                            <span>Cardiology</span>
+                        </div>
+                        <div class="department-card" data-department="Neurology">
+                            <i class="fas fa-brain"></i>
+                            <span>Neurology</span>
+                        </div>
+                        <div class="department-card" data-department="Orthopedics">
+                            <i class="fas fa-bone"></i>
+                            <span>Orthopedics</span>
+                        </div>
+                        <div class="department-card" data-department="Ophthalmology">
+                            <i class="fas fa-eye"></i>
+                            <span>Ophthalmology</span>
+                        </div>
+                        <div class="department-card" data-department="Pediatrics">
+                            <i class="fas fa-child"></i>
+                            <span>Pediatrics</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Doctors List -->
+                <div class="doctors-section" style="display: none;">
+                    <h3>Available Doctors</h3>
+                    <div id="doctorsContainer">
+                        <!-- This will contain either the loading message, error message, or doctors grid -->
+                        <div id="doctorsGrid" class="doctors-grid"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 2: Date and Time Selection -->
+            <section class="booking-section" id="dateTimeSelection" style="display: none;">
+                <h3>Select Appointment Date & Time</h3>
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <button class="prev-month"><i class="fas fa-chevron-left"></i></button>
+                        <h3 class="current-month"></h3>
+                        <button class="next-month"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="calendar-grid"></div>
+                    <div class="time-slots">
+                        <h4>Available Time Slots</h4>
+                        <div class="slots-grid"></div>
+                    </div>
+                </div>
+                <div class="section-navigation">
+                    <button class="back-btn">Back to Doctor Selection</button>
+                    <button class="next-btn">Continue to Patient Details</button>
+                </div>
+            </section>
+
+            <!-- Step 3: Patient Details -->
+            <section class="booking-section" id="patientDetails" style="display: none;">
+                <h3>Patient Information</h3>
+                <form id="patientForm" class="patient-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">Full Name</label>
+                            <input type="text" id="fullName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="contactNumber">Contact Number</label>
+                            <input type="tel" id="contactNumber" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="adhar">Aadhar Number</label>
+                            <input type="text" id="adhar" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <div class="gender-options">
+                                <label class="gender-option">
+                                    <input type="radio" name="gender" value="Male" required>
+                                    <span><i class="fas fa-male"></i> Male</span>
+                                </label>
+                                <label class="gender-option">
+                                    <input type="radio" name="gender" value="Female">
+                                    <span><i class="fas fa-female"></i> Female</span>
+                                </label>
+                                <label class="gender-option">
+                                    <input type="radio" name="gender" value="Other">
+                                    <span><i class="fas fa-user"></i> Other</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="address">Address</label>
+                            <textarea id="address" required></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">City</label>
+                            <input type="text" id="city" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="state">State</label>
+                            <input type="text" id="state" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="pinCode">PIN Code</label>
+                            <input type="text" id="pinCode" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="description">Medical Concerns (Optional)</label>
+                            <textarea id="description"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="appointment-summary">
+                        <h4>Appointment Summary</h4>
+                        <p><strong>Selected Doctor:</strong> <span id="summaryDoctor"></span></p>
+                        <p><strong>Department:</strong> <span id="summaryDepartment"></span></p>
+                        <p><strong>Date:</strong> <span id="summaryDate"></span></p>
+                        <p><strong>Time:</strong> <span id="summaryTime"></span></p>
+                    </div>
+
+                    <div class="form-navigation">
+                        <button type="button" class="back-btn">Back</button>
+                        <button type="submit" class="submit-btn">Book Appointment</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    <script src="appointment.js"></script>
+</body>
+</html> 
