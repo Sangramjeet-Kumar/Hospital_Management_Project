@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard</title>
+    <link rel="stylesheet" href="doctor_dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="profile-section">
+                <img src="doctor.jpg" alt="Doctor Profile" class="profile-img">
+                <h2 id="doctorName">Dr. Name</h2>
+                <p id="specialty">Specialty</p>
+            </div>
+            <ul class="nav-links">
+                <li class="active" data-tab="appointments"><i class="fas fa-calendar-alt"></i> Appointments</li>
+                <li data-tab="profile"><i class="fas fa-user"></i> Profile</li>
+                <li data-tab="bed-management"><i class="fas fa-bed"></i> Bed Management</li>
+                <li class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <!-- Appointments Section -->
+            <section id="appointments" class="tab-content active">
+                <h2>Today's Appointments</h2>
+                <div class="appointment-filters">
+                    <button class="filter-btn active" data-status="all">All</button>
+                    <button class="filter-btn" data-status="checked-in">Checked In</button>
+                    <button class="filter-btn" data-status="waiting">Waiting</button>
+                    <button class="filter-btn" data-status="completed">Completed</button>
+                    <button class="filter-btn" data-status="canceled">Canceled</button>
+                </div>
+                <div class="appointments-list" id="appointmentsList">
+                    <!-- Appointments will be populated here -->
+                </div>
+            </section>
+
+            <!-- Profile Section -->
+            <section id="profile" class="tab-content">
+                <h2>Profile & Availability</h2>
+                <div class="profile-grid">
+                    <div class="profile-info">
+                        <h3>Personal Information</h3>
+                        <form id="profileForm">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="fullName" name="fullName">
+                            </div>
+                            <div class="form-group">
+                                <label>Specialty</label>
+                                <input type="text" id="doctorSpecialty" name="specialty">
+                            </div>
+                            <div class="form-group">
+                                <label>Contact Number</label>
+                                <input type="tel" id="contactNumber" name="contactNumber">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="email" name="email">
+                            </div>
+                            <button type="submit" class="btn-primary">Update Profile</button>
+                        </form>
+                    </div>
+                    <div class="availability-schedule">
+                        <h3>Weekly Availability</h3>
+                        <div id="availabilityCalendar">
+                            <!-- Calendar will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bed Management Section -->
+            <section id="bed-management" class="tab-content">
+                <h2>Bed Management</h2>
+                <div class="bed-management-controls">
+                    <div class="search-box">
+                        <input type="text" id="bedSearch" placeholder="Search by bed number or patient name...">
+                    </div>
+                    <button class="btn-primary" id="allocateNewBed">
+                        <i class="fas fa-plus"></i> Allocate New Bed
+                    </button>
+                </div>
+                <div class="bed-status-filters">
+                    <button class="filter-btn active" data-bed-status="all">All Beds</button>
+                    <button class="filter-btn" data-bed-status="occupied">Occupied</button>
+                    <button class="filter-btn" data-bed-status="available">Available</button>
+                    <button class="filter-btn" data-bed-status="maintenance">Maintenance</button>
+                </div>
+                <div class="bed-grid" id="bedGrid">
+                    <!-- Bed cards will be populated here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <div id="allocationModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Allocate/Transfer Bed</h2>
+            <form id="bedAllocationForm">
+                <div class="form-group">
+                    <label>Patient Name</label>
+                    <input type="text" id="patientName" required>
+                </div>
+                <div class="form-group">
+                    <label>Current Bed Number (if transfer)</label>
+                    <input type="text" id="currentBed">
+                </div>
+                <div class="form-group">
+                    <label>New Bed Number</label>
+                    <select id="newBedNumber" required>
+                        <!-- Available beds will be populated here -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Reason for Allocation/Transfer</label>
+                    <textarea id="allocationReason" required></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Confirm Allocation</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="doctor_dashboard.js"></script>
+</body>
+</html> 
