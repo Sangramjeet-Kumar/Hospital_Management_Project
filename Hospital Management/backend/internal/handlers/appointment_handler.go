@@ -61,33 +61,44 @@ func CreateAppointment(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
-	// Insert patient
-	patientQuery := `
-        INSERT INTO Patients (FullName, ContactNumber, Email, Address, City, State, PinCode, Gender, Adhar)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	// Check if patient already exists based on email
+	var patientID int64
+	patientCheckQuery := "SELECT PatientID FROM Patients WHERE Email = ?"
+	err = tx.QueryRow(patientCheckQuery, req.Patient.Email).Scan(&patientID)
 
-	patientResult, err := tx.Exec(patientQuery,
-		req.Patient.FullName,
-		req.Patient.ContactNumber,
-		req.Patient.Email,
-		req.Patient.Address,
-		req.Patient.City,
-		req.Patient.State,
-		req.Patient.PinCode,
-		req.Patient.Gender,
-		req.Patient.Adhar,
-	)
+	// If patient doesn't exist, create a new one
 	if err != nil {
-		log.Printf("Error inserting patient: %v", err)
-		sendJSONError(w, "Error creating patient record", http.StatusInternalServerError)
-		return
-	}
+		log.Printf("Patient not found, creating new patient record: %v", err)
+		// Insert patient
+		patientQuery := `
+			INSERT INTO Patients (FullName, ContactNumber, Email, Address, City, State, PinCode, Gender, Adhar)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	patientID, err := patientResult.LastInsertId()
-	if err != nil {
-		log.Printf("Error getting patient ID: %v", err)
-		sendJSONError(w, "Database error", http.StatusInternalServerError)
-		return
+		patientResult, err := tx.Exec(patientQuery,
+			req.Patient.FullName,
+			req.Patient.ContactNumber,
+			req.Patient.Email,
+			req.Patient.Address,
+			req.Patient.City,
+			req.Patient.State,
+			req.Patient.PinCode,
+			req.Patient.Gender,
+			req.Patient.Adhar,
+		)
+		if err != nil {
+			log.Printf("Error inserting patient: %v", err)
+			sendJSONError(w, "Error creating patient record", http.StatusInternalServerError)
+			return
+		}
+
+		patientID, err = patientResult.LastInsertId()
+		if err != nil {
+			log.Printf("Error getting patient ID: %v", err)
+			sendJSONError(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		log.Printf("Using existing patient with ID: %d", patientID)
 	}
 
 	// Parse and format appointment date
@@ -103,8 +114,8 @@ func CreateAppointment(w http.ResponseWriter, r *http.Request) {
 
 	// Insert appointment
 	appointmentQuery := `
-        INSERT INTO Appointment (PatientID, DoctorID, AppointmentDate, AppointmentTime, Description, Status)
-        VALUES (?, ?, ?, ?, ?, ?)`
+		INSERT INTO Appointment (PatientID, DoctorID, AppointmentDate, AppointmentTime, Description, Status)
+		VALUES (?, ?, ?, ?, ?, ?)`
 
 	appointmentResult, err := tx.Exec(appointmentQuery,
 		patientID,
@@ -249,6 +260,7 @@ func GetFilteredAppointments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
@@ -319,7 +331,7 @@ func GetFilteredAppointments(w http.ResponseWriter, r *http.Request) {
 	rows, err := database.DB.Query(query)
 	if err != nil {
 		log.Printf("Database error: %v", err)
-		sendJSONError(w, "Failed to fetch appointments", http.StatusInternalServerError)
+		sendJSONError(w, fmt.Sprintf("Failed to fetch appointments: %v", err), http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
@@ -346,10 +358,9 @@ func GetFilteredAppointments(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Successfully fetched %d appointments for range: %s", len(appointments), dateRange)
 
 	// Send response
-	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(appointments); err != nil {
 		log.Printf("Error encoding response: %v", err)
-		sendJSONError(w, "Error encoding response", http.StatusInternalServerError)
+		sendJSONError(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
 		return
 	}
 }

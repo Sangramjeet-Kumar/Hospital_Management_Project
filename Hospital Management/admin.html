@@ -32,6 +32,10 @@
                     <i class="fas fa-user-md"></i>
                     <span>Doctors</span>
                 </li>
+                <li data-tab="beds">
+                    <i class="fas fa-bed"></i>
+                    <span>Beds</span>
+                </li>
                 <li data-tab="departments">
                     <i class="fas fa-hospital"></i>
                     <span>Departments</span>
@@ -59,7 +63,9 @@
                 </div>
                 <div class="admin-profile">
                     <span class="admin-name">Admin User</span>
-                    <img src="https://via.placeholder.com/40" alt="Admin" class="admin-avatar">
+                    <div class="settings-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
                 </div>
             </div>
 
@@ -73,7 +79,7 @@
                         </div>
                         <div class="stat-info">
                             <h3>Total Appointments</h3>
-                            <p id="totalAppointments">0</p>
+                            <p id="totalAppointments">4</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -82,7 +88,7 @@
                         </div>
                         <div class="stat-info">
                             <h3>Total Patients</h3>
-                            <p id="totalPatients">0</p>
+                            <p id="totalPatients">4</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -91,26 +97,24 @@
                         </div>
                         <div class="stat-info">
                             <h3>Total Doctors</h3>
-                            <p id="totalDoctors">0</p>
+                            <p id="totalDoctors">17</p>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon">
-                            <i class="fas fa-check-circle"></i>
+                            <i class="fas fa-bed"></i>
                         </div>
                         <div class="stat-info">
-                            <h3>Completed Appointments</h3>
-                            <p id="completedAppointments">0</p>
+                            <h3>Available Beds</h3>
+                            <p id="availableBeds">24</p>
                         </div>
                     </div>
                 </div>
 
-                <div class="charts-container">
-                    <div class="chart-card">
-                        <h3>Recent Activity</h3>
-                        <div class="activity-list">
-                            <!-- Activity items will be populated by JavaScript -->
-                        </div>
+                <div class="recent-activity-section">
+                    <h2>Recent Activity</h2>
+                    <div class="activity-list" id="recentActivity">
+                        <!-- Activity items will be populated by JavaScript -->
                     </div>
                 </div>
             </section>
@@ -171,9 +175,334 @@
                     </table>
                 </div>
             </section>
+
+            <!-- Doctors Section -->
+            <section id="doctors" class="content-section">
+                <h1>Doctors Management</h1>
+                <div class="filters-section">
+                    <div class="search-filter">
+                        <input type="text" id="doctorSearch" placeholder="Search doctors...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <button class="add-btn">
+                        <i class="fas fa-plus"></i>
+                        Add New Doctor
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Contact</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doctorsTableBody">
+                            <!-- Doctor records will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Departments Section -->
+            <section id="departments" class="content-section">
+                <h1>Departments Management</h1>
+                <div class="filters-section">
+                    <button class="add-btn">
+                        <i class="fas fa-plus"></i>
+                        Add New Department
+                    </button>
+                </div>
+                <div class="departments-grid">
+                    <!-- Departments will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Beds Section -->
+            <section id="beds" class="content-section">
+                <h1>Hospital Bed Management</h1>
+                
+                <!-- Bed Stats Overview -->
+                <div class="bed-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Total Beds</h3>
+                            <p id="totalBeds">50</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bed-occupied">
+                            <i class="fas fa-procedures"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Occupied Beds</h3>
+                            <p id="occupiedBeds">26</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon bed-vacant">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3>Vacant Beds</h3>
+                            <p id="vacantBeds">24</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bed Visualization & Types Section -->
+                <div class="bed-content-grid">
+                    <div class="bed-chart-container">
+                        <h2>Bed Occupancy by Type</h2>
+                        <div class="bed-chart">
+                            <canvas id="bedOccupancyChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="bed-types-container">
+                        <h2>Bed Types</h2>
+                        <div class="bed-types-grid" id="bedTypesGrid">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bed Inventory & Assignments Tabs -->
+                <div class="beds-tabs-container">
+                    <div class="beds-tabs">
+                        <button class="beds-tab-btn active" data-tab="bedInventory">Bed Inventory</button>
+                        <button class="beds-tab-btn" data-tab="bedAssignments">Bed Assignments</button>
+                    </div>
+                    
+                    <div class="beds-tab-content">
+                        <!-- Bed Inventory Tab -->
+                        <div id="bedInventory" class="beds-tab-pane active">
+                            <div class="filters-section">
+                                <div class="filter-group">
+                                    <label for="bedTypeFilter">Filter by Type:</label>
+                                    <select id="bedTypeFilter">
+                                        <option value="">All Types</option>
+                                        <!-- Will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div class="search-filter">
+                                    <input type="text" id="bedSearch" placeholder="Search beds...">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <button class="add-btn" onclick="openNewBedModal()">
+                                    <i class="fas fa-plus"></i>
+                                    Add New Bed
+                                </button>
+                            </div>
+                            
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Bed ID</th>
+                                            <th>Hospital</th>
+                                            <th>Bed Type</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bedInventoryTableBody">
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- Bed Assignments Tab -->
+                        <div id="bedAssignments" class="beds-tab-pane">
+                            <div class="filters-section">
+                                <div class="filter-group">
+                                    <label for="assignmentStatusFilter">Filter by Status:</label>
+                                    <select id="assignmentStatusFilter">
+                                        <option value="">All Assignments</option>
+                                        <option value="current">Current Patients</option>
+                                        <option value="discharged">Discharged Patients</option>
+                                    </select>
+                                </div>
+                                <div class="search-filter">
+                                    <input type="text" id="assignmentSearch" placeholder="Search assignments...">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="add-btn" onclick="openBedAssignmentModal()">
+                                        <i class="fas fa-plus"></i>
+                                        New Assignment
+                                    </button>
+                                    <button class="cancel-btn" onclick="clearAllAssignments()" title="Clear all bed assignments">
+                                        <i class="fas fa-trash"></i>
+                                        Clear All
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Assignment ID</th>
+                                            <th>Bed ID</th>
+                                            <th>Patient</th>
+                                            <th>Bed Type</th>
+                                            <th>Admission Date</th>
+                                            <th>Discharge Date</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bedAssignmentsTableBody">
+                                        <!-- Will be populated by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
+    <!-- Modal for Bed Assignment -->
+    <div id="bedAssignmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Assign Bed to Patient</h3>
+                <span class="close" onclick="closeBedAssignmentModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="assignmentErrorMessage" class="error-message" style="display: none;"></div>
+                
+                <!-- Patient Selection Area -->
+                <div id="patientSelectArea">
+                    <div class="form-group">
+                        <label for="patientSelect" class="required">Patient</label>
+                        <div class="select-with-action">
+                            <select id="patientSelect" required>
+                                <option value="">Select Patient</option>
+                            </select>
+                            <button type="button" id="addNewPatientBtn" class="add-new-btn">+ Add New Patient</button>
+                        </div>
+                        <small class="form-help">Only patients without current bed assignments are shown</small>
+                    </div>
+                </div>
+                
+                <!-- New Patient Form - Initially Hidden -->
+                <div id="newPatientForm" style="display: none;">
+                    <h4>Add New Patient</h4>
+                    <div class="form-group">
+                        <label for="newPatientName" class="required">Full Name</label>
+                        <input type="text" id="newPatientName" placeholder="Enter patient full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPatientPhone" class="required">Contact Number</label>
+                        <input type="tel" id="newPatientPhone" placeholder="Enter contact number" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPatientEmail">Email</label>
+                        <input type="email" id="newPatientEmail" placeholder="Enter email address">
+                    </div>
+                    <div class="form-group">
+                        <label for="newPatientGender" class="required">Gender</label>
+                        <select id="newPatientGender" required>
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" id="cancelNewPatient">Cancel</button>
+                        <button type="button" onclick="createNewPatient()">Create Patient</button>
+                    </div>
+                </div>
+                
+                <form id="bedAssignmentForm">
+                    <div id="bedSelectionArea">
+                        <div class="form-group">
+                            <label for="bedSelect" class="required">Available Bed</label>
+                            <select id="bedSelect" required>
+                                <option value="">Select Bed</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="admissionDate" class="required">Admission Date</label>
+                            <input type="date" id="admissionDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="dischargeDate">Expected Discharge Date (Optional)</label>
+                            <input type="date" id="dischargeDate">
+                        </div>
+                        <div class="form-group">
+                            <label for="assignmentNotes">Notes</label>
+                            <textarea id="assignmentNotes" rows="3" placeholder="Enter any relevant notes about this assignment"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" onclick="closeBedAssignmentModal()">Cancel</button>
+                            <button type="submit">Assign Bed</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for New Bed -->
+    <div id="newBedModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Bed</h3>
+                <span class="close" onclick="closeNewBedModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="bedErrorMessage" class="error-message" style="display: none;"></div>
+                <form id="newBedForm">
+                    <div class="form-group">
+                        <label for="bedTypeSelect">Bed Type:</label>
+                        <select id="bedTypeSelect" required>
+                            <option value="">Select Bed Type</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="hospitalSelect">Hospital:</label>
+                        <select id="hospitalSelect" required>
+                            <option value="1">Main Hospital</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bedStatusSelect">Bed Status:</label>
+                        <select id="bedStatusSelect" required>
+                            <option value="available">Available</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" onclick="closeNewBedModal()">Cancel</button>
+                        <button type="submit">Create Bed</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Links For Debugging -->
+    <div style="position: fixed; bottom: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ddd;">
+        <button onclick="openBedAssignmentModal()">Test Assignment Modal</button>
+        <button onclick="openNewBedModal()">Test Bed Modal</button>
+        <button onclick="clearAllBeds()" style="background-color: #ffebee; color: #c62828;">Clear All Beds</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="admin.js"></script>
 </body>
 </html> 

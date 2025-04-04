@@ -1,0 +1,21 @@
+2025/04/04 19:29:28 Successfully connected to MySQL database
+2025/04/04 19:29:28 Starting server on port 8080...
+2025/04/04 19:29:28 Bed API endpoints:
+2025/04/04 19:29:28 GET /api/beds/types - Get all bed types
+2025/04/04 19:29:28 GET /api/beds/inventory - Get all beds
+2025/04/04 19:29:28 POST /api/beds/add or POST /api/beds - Add a new bed
+2025/04/04 19:29:28 GET /api/beds/assignments - Get all bed assignments
+2025/04/04 19:29:28 POST /api/beds/assignments/add - Add a new bed assignment
+2025/04/04 19:29:28 GET /api/beds/stats - Get bed statistics
+2025/04/04 19:42:29 Received request for department: Neurology
+2025/04/04 19:42:29 Executing query: SELECT DoctorID, FullName, Description, ContactNumber, Email, Department, Username 
+                 FROM Doctors WHERE Department = ? with args: [Neurology]
+2025/04/04 19:42:29 Found 4 doctors for department Neurology
+2025/04/04 19:43:41 Received appointment request: {DoctorID:3 AppointmentDate:2025-04-06 AppointmentTime:10:30 AM Description:Ill Patient:{PatientID:0 FullName:ram ContactNumber:5934795893457 Email:R@gmail.com Address:dholakpur City:dholakpur State:Gugrat PinCode:78345364 Gender:Male Adhar:423642574726}}
+2025/04/04 19:43:41 Using existing patient with ID: 4
+2025/04/04 19:45:04 Received request for department: Cardiology
+2025/04/04 19:45:04 Executing query: SELECT DoctorID, FullName, Description, ContactNumber, Email, Department, Username 
+                 FROM Doctors WHERE Department = ? with args: [Cardiology]
+2025/04/04 19:45:04 Found 4 doctors for department Cardiology
+2025/04/04 19:46:01 Received appointment request: {DoctorID:11 AppointmentDate:2025-04-15 AppointmentTime:10:30 AM Description:gjhghj Patient:{PatientID:0 FullName:Bhim ContactNumber:73463746373 Email:B@gmail.com Address:hdfjhasiuehsj City:sdhfuhdu State:hhdsf PinCode:795479 Gender:Other Adhar:384328746823}}
+2025/04/04 19:46:01 Patient not found, creating new patient record: sql: no rows in result set

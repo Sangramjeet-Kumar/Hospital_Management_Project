@@ -90,12 +90,12 @@ func GetPatients(w http.ResponseWriter, r *http.Request) {
 	var patients []map[string]interface{}
 	for rows.Next() {
 		var patient struct {
-			PatientID     int       `json:"patient_id"`
-			FullName      string    `json:"full_name"`
-			ContactNumber string    `json:"contact_number"`
-			Email         string    `json:"email"`
-			Gender        string    `json:"gender"`
-			LastVisit     time.Time `json:"last_visit"`
+			PatientID     int         `json:"patient_id"`
+			FullName      string      `json:"full_name"`
+			ContactNumber string      `json:"contact_number"`
+			Email         string      `json:"email"`
+			Gender        string      `json:"gender"`
+			LastVisit     interface{} `json:"last_visit"`
 		}
 
 		err := rows.Scan(
@@ -115,10 +115,20 @@ func GetPatients(w http.ResponseWriter, r *http.Request) {
 			"patient_id":     patient.PatientID,
 			"full_name":      patient.FullName,
 			"contact_number": patient.ContactNumber,
-			"email":         patient.Email,
-			"gender":        patient.Gender,
-			"last_visit":    patient.LastVisit.Format("2006-01-02"),
+			"email":          patient.Email,
+			"gender":         patient.Gender,
 		}
+
+		if patient.LastVisit != nil {
+			if lastVisit, ok := patient.LastVisit.(time.Time); ok {
+				patientMap["last_visit"] = lastVisit.Format("2006-01-02")
+			} else {
+				patientMap["last_visit"] = patient.LastVisit
+			}
+		} else {
+			patientMap["last_visit"] = nil
+		}
+
 		patients = append(patients, patientMap)
 	}
 
@@ -161,4 +171,4 @@ func GetRecentActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(activities)
-} 
+}

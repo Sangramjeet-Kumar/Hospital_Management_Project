@@ -14,10 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
             noAppointments.style.display = 'none';
             tableBody.innerHTML = '';
 
+            console.log(`Fetching appointments for range: ${range}`);
             const response = await fetch(`http://localhost:8080/api/appointments/list?range=${range}`);
-            if (!response.ok) throw new Error('Failed to fetch appointments');
+            if (!response.ok) {
+                console.error(`API returned status: ${response.status}`);
+                const errorText = await response.text();
+                console.error(`Error response: ${errorText}`);
+                throw new Error(`Failed to fetch appointments: ${response.status}`);
+            }
 
-            appointments = await response.json();
+            const responseData = await response.json();
+            console.log('API response:', responseData);
+            appointments = responseData;
             
             // Sort appointments by date and time
             appointments.sort((a, b) => {
@@ -29,12 +37,15 @@ document.addEventListener('DOMContentLoaded', () => {
             updateStats(appointments);
             displayAppointments(appointments);
         } catch (error) {
-            console.error('Error:', error);
-            showError('Failed to load appointments');
+            console.error('Error details:', error);
+            showError(`Failed to load appointments: ${error.message}`);
         } finally {
             loadingIndicator.style.display = 'none';
         }
     }
+    
+    // Make fetchAppointments available globally
+    window.fetchAppointments = fetchAppointments;
 
     // Display appointments in table
     function displayAppointments(appointments) {
@@ -186,8 +197,9 @@ async function updateAppointmentStatus(appointmentId, isCompleted) {
             throw new Error('Failed to update appointment status');
         }
 
-        // Refresh the appointments list
-        fetchAppointments(dateRange.value);
+        // Refresh the appointments list using the global function
+        const dateRangeElement = document.getElementById('dateRange');
+        window.fetchAppointments(dateRangeElement.value);
     } catch (error) {
         console.error('Error updating appointment status:', error);
         alert('Failed to update appointment status. Please try again.');
