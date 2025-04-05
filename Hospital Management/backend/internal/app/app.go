@@ -47,6 +47,14 @@ func SetupRouter() *mux.Router {
 	// Hospital management API endpoints
 	r.HandleFunc("/api/hospitals", handlers.GetHospitals).Methods("GET")
 
+	// Doctor Dashboard API endpoints
+	r.HandleFunc("/api/doctor/{doctorID}/appointments", handlers.GetDoctorAppointments).Methods("GET")
+	r.HandleFunc("/api/doctor/{doctorID}/profile", handlers.GetDoctorProfile).Methods("GET")
+	r.HandleFunc("/api/doctor/{doctorID}/profile", handlers.UpdateDoctorProfile).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/doctor/{doctorID}/beds", handlers.GetDoctorBeds).Methods("GET")
+	r.HandleFunc("/api/doctor/bed/allocate", handlers.AllocateBed).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/doctor/{doctorID}/patients", handlers.GetDoctorPatients).Methods("GET")
+
 	return r
 }
 
