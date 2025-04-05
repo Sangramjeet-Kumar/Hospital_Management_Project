@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"hospital-management/backend/internal/database"
 	"hospital-management/backend/internal/models"
+	"io"
 	"log"
 	"net/http"
 )
@@ -98,8 +100,20 @@ func CreateBed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log request body for debugging
+	requestBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading request body: %v", err)
+		bedSendJSONError(w, "Error reading request body", http.StatusBadRequest)
+		return
+	}
+	// Create a new reader from the read bytes for later use
+	r.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+
+	log.Printf("Received request to create bed: %s", string(requestBody))
+
 	var bed models.Bed
-	err := json.NewDecoder(r.Body).Decode(&bed)
+	err = json.NewDecoder(r.Body).Decode(&bed)
 	if err != nil {
 		log.Printf("Error decoding request body: %v", err)
 		bedSendJSONError(w, "Invalid request body", http.StatusBadRequest)
@@ -122,17 +136,33 @@ func CreateBed(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if count == 0 {
+		log.Printf("Invalid bed type: %s", bed.BedType)
 		bedSendJSONError(w, "Invalid bed type", http.StatusBadRequest)
 		return
 	}
 
+	// Start a transaction
+	tx, err := database.DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			log.Printf("Transaction rolled back due to error: %v", err)
+		}
+	}()
+
 	// Insert new bed
-	result, err := database.DB.Exec(
+	log.Printf("Inserting new bed: HospitalID=%d, BedType=%s", bed.HospitalID, bed.BedType)
+	result, err := tx.Exec(
 		"INSERT INTO BedInventory (HospitalID, BedType) VALUES (?, ?)",
 		bed.HospitalID, bed.BedType)
 	if err != nil {
 		log.Printf("Error inserting bed: %v", err)
-		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
+		bedSendJSONError(w, "Database error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -143,18 +173,48 @@ func CreateBed(w http.ResponseWriter, r *http.Request) {
 		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
+	log.Printf("New bed created with ID: %d", bedID)
+
+	// Check if BedsCount record exists
+	var bedsCountExists int
+	err = tx.QueryRow(
+		"SELECT COUNT(*) FROM BedsCount WHERE HospitalID = ? AND BedType = ?",
+		bed.HospitalID, bed.BedType).Scan(&bedsCountExists)
+	if err != nil {
+		log.Printf("Error checking BedsCount: %v", err)
+		bedSendJSONError(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Update the BedsCount table
-	_, err = database.DB.Exec(
-		`INSERT INTO BedsCount (HospitalID, BedType, TotalBeds, OccupiedBeds, VacantBeds) 
-         VALUES (?, ?, 1, 0, 1)
-         ON DUPLICATE KEY UPDATE 
-         TotalBeds = TotalBeds + 1, 
-         VacantBeds = VacantBeds + 1`,
-		bed.HospitalID, bed.BedType)
+	if bedsCountExists > 0 {
+		// Update existing record
+		_, err = tx.Exec(
+			`UPDATE BedsCount 
+			 SET TotalBeds = TotalBeds + 1, 
+				 VacantBeds = VacantBeds + 1
+			 WHERE HospitalID = ? AND BedType = ?`,
+			bed.HospitalID, bed.BedType)
+	} else {
+		// Insert new record
+		_, err = tx.Exec(
+			`INSERT INTO BedsCount (HospitalID, BedType, TotalBeds, OccupiedBeds, VacantBeds) 
+			 VALUES (?, ?, 1, 0, 1)`,
+			bed.HospitalID, bed.BedType)
+	}
+
 	if err != nil {
 		log.Printf("Error updating BedsCount: %v", err)
-		// Don't fail the request, just log the error
+		bedSendJSONError(w, "Database error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Commit the transaction
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
 	}
 
 	// Return the new bed with ID
@@ -168,6 +228,7 @@ func CreateBed(w http.ResponseWriter, r *http.Request) {
 		// Don't include hospital name if not found
 	}
 
+	log.Printf("Successfully created bed: %+v", bed)
 	json.NewEncoder(w).Encode(bed)
 }
 

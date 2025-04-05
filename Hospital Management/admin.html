@@ -296,10 +296,12 @@
                                     <input type="text" id="bedSearch" placeholder="Search beds...">
                                     <i class="fas fa-search"></i>
                                 </div>
-                                <button class="add-btn" onclick="openNewBedModal()">
-                                    <i class="fas fa-plus"></i>
-                                    Add New Bed
-                                </button>
+                                <div class="beds-action-buttons">
+                                    <button id="add-bed-btn" class="btn btn-primary" onclick="document.getElementById('new-bed-modal').style.display='block'">
+                                        <span class="btn-icon">+</span> Add New Bed
+                                    </button>
+                                    <button id="refresh-beds-btn" class="btn">Refresh Data</button>
+                                </div>
                             </div>
                             
                             <div class="table-container">
@@ -457,38 +459,44 @@
         </div>
     </div>
 
-    <!-- Modal for New Bed -->
-    <div id="newBedModal" class="modal">
+    <!-- New Bed Modal -->
+    <div id="new-bed-modal" class="modal" style="background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Add New Bed</h3>
-                <span class="close" onclick="closeNewBedModal()">&times;</span>
+                <h2>Add New Bed</h2>
+                <span class="close" onclick="document.getElementById('new-bed-modal').style.display='none'">&times;</span>
             </div>
             <div class="modal-body">
-                <div id="bedErrorMessage" class="error-message" style="display: none;"></div>
-                <form id="newBedForm">
+                <form id="new-bed-form" onsubmit="return submitNewBed(event);">
                     <div class="form-group">
-                        <label for="bedTypeSelect">Bed Type:</label>
-                        <select id="bedTypeSelect" required>
+                        <label for="bed-type">Bed Type:</label>
+                        <select id="bed-type" name="bed-type" required>
                             <option value="">Select Bed Type</option>
+                            <option value="General">General</option>
+                            <option value="ICU">ICU</option>
+                            <option value="Pediatric">Pediatric</option>
+                            <option value="Private">Private</option>
+                            <option value="Semi-Private">Semi-Private</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="hospitalSelect">Hospital:</label>
-                        <select id="hospitalSelect" required>
-                            <option value="1">Main Hospital</option>
+                        <label for="hospital-id">Hospital:</label>
+                        <select id="hospital-id" name="hospital-id" required>
+                            <option value="">Select Hospital</option>
+                            <option value="1">123 Main Rd</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="bedStatusSelect">Bed Status:</label>
-                        <select id="bedStatusSelect" required>
-                            <option value="available">Available</option>
+                        <label for="bed-status">Bed Status:</label>
+                        <select id="bed-status" name="bed-status" required>
+                            <option value="available" selected>Available</option>
+                            <option value="occupied">Occupied</option>
                             <option value="maintenance">Maintenance</option>
                         </select>
                     </div>
-                    <div class="form-actions">
-                        <button type="button" onclick="closeNewBedModal()">Cancel</button>
-                        <button type="submit">Create Bed</button>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Add Bed</button>
+                        <button type="button" id="cancel-bed-btn" class="btn" onclick="document.getElementById('new-bed-modal').style.display='none'">Cancel</button>
                     </div>
                 </form>
             </div>

@@ -1,58 +1,36 @@
 package main
 
 import (
+	"fmt"
+	"hospital-management/backend/internal/app"
 	"hospital-management/backend/internal/database"
-	"hospital-management/backend/internal/handlers"
 	"log"
-	"net/http"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
 	// Initialize database
 	database.InitDB()
 
-	// Create router
-	r := mux.NewRouter()
+	// Initialize the application
+	app.Initialize()
 
-	// Routes
-	r.HandleFunc("/api/appointments", handlers.CreateAppointment).Methods("POST")
-	r.HandleFunc("/api/doctors", handlers.GetDoctors).Methods("GET")
-	r.HandleFunc("/api/appointments/list", handlers.GetFilteredAppointments).Methods("GET")
-	r.HandleFunc("/api/appointments/{id}/status", handlers.UpdateAppointmentStatus).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/admin/stats", handlers.GetAdminStats).Methods("GET")
-	r.HandleFunc("/api/admin/activity", handlers.GetRecentActivity).Methods("GET")
-	r.HandleFunc("/api/patients", handlers.GetPatients).Methods("GET")
+	// Handle graceful shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	// Bed management routes
-	r.HandleFunc("/api/beds/types", handlers.GetBedTypes).Methods("GET")
-	r.HandleFunc("/api/beds/inventory", handlers.GetBedInventory).Methods("GET")
-	r.HandleFunc("/api/beds", handlers.CreateBed).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/beds/add", handlers.CreateBed).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/beds/assignments", handlers.GetBedAssignments).Methods("GET")
-	r.HandleFunc("/api/beds/assignments/add", handlers.CreateBedAssignment).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/beds/stats", handlers.GetBedStats).Methods("GET")
+	go func() {
+		<-c
+		fmt.Println("\nShutting down server...")
+		// Add cleanup code here if needed
+		os.Exit(0)
+	}()
 
-	// CORS middleware
-	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"}, // For development only, update for production
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"*"},
-		AllowCredentials: true,
-	})
-
-	// Print startup message with endpoint info
-	log.Println("Starting server on port 8080...")
-	log.Println("Bed API endpoints:")
-	log.Println("GET /api/beds/types - Get all bed types")
-	log.Println("GET /api/beds/inventory - Get all beds")
-	log.Println("POST /api/beds/add or POST /api/beds - Add a new bed")
-	log.Println("GET /api/beds/assignments - Get all bed assignments")
-	log.Println("POST /api/beds/assignments/add - Add a new bed assignment")
-	log.Println("GET /api/beds/stats - Get bed statistics")
-
-	// Start server
-	log.Fatal(http.ListenAndServe(":8080", c.Handler(r)))
+	// Start the application
+	err := app.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

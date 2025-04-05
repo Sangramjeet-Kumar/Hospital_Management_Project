@@ -28,7 +28,7 @@ func SetupRouter() *mux.Router {
 	r := mux.NewRouter()
 
 	// Routes already defined in main.go
-	r.HandleFunc("/api/appointments", handlers.CreateAppointment).Methods("POST")
+	r.HandleFunc("/api/appointments", handlers.CreateAppointment).Methods("GET", "POST")
 	r.HandleFunc("/api/doctors", handlers.GetDoctors).Methods("GET")
 	r.HandleFunc("/api/appointments/list", handlers.GetFilteredAppointments).Methods("GET")
 	r.HandleFunc("/api/appointments/{id}/status", handlers.UpdateAppointmentStatus).Methods("PUT", "OPTIONS")
@@ -39,11 +39,13 @@ func SetupRouter() *mux.Router {
 	// Bed management API endpoints
 	r.HandleFunc("/api/beds/types", handlers.GetBedTypes).Methods("GET")
 	r.HandleFunc("/api/beds/inventory", handlers.GetBedInventory).Methods("GET")
-	r.HandleFunc("/api/beds", handlers.CreateBed).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/beds/add", handlers.CreateBed).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/beds/assignments", handlers.GetBedAssignments).Methods("GET")
 	r.HandleFunc("/api/beds/assignments/add", handlers.CreateBedAssignment).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/beds/stats", handlers.GetBedStats).Methods("GET")
+
+	// Hospital management API endpoints
+	r.HandleFunc("/api/hospitals", handlers.GetHospitals).Methods("GET")
 
 	return r
 }

@@ -19,3 +19,11 @@
 2025/04/04 19:45:04 Found 4 doctors for department Cardiology
 2025/04/04 19:46:01 Received appointment request: {DoctorID:11 AppointmentDate:2025-04-15 AppointmentTime:10:30 AM Description:gjhghj Patient:{PatientID:0 FullName:Bhim ContactNumber:73463746373 Email:B@gmail.com Address:hdfjhasiuehsj City:sdhfuhdu State:hhdsf PinCode:795479 Gender:Other Adhar:384328746823}}
 2025/04/04 19:46:01 Patient not found, creating new patient record: sql: no rows in result set
+2025/04/05 00:03:16 Received request for department: Cardiology
+2025/04/05 00:03:16 Executing query: SELECT DoctorID, FullName, Description, ContactNumber, Email, Department, Username 
+                 FROM Doctors WHERE Department = ? with args: [Cardiology]
+2025/04/05 00:03:16 Found 4 doctors for department Cardiology
+2025/04/05 00:05:47 Received request for department: Cardiology
+2025/04/05 00:05:47 Executing query: SELECT DoctorID, FullName, Description, ContactNumber, Email, Department, Username 
+                 FROM Doctors WHERE Department = ? with args: [Cardiology]
+2025/04/05 00:05:47 Found 4 doctors for department Cardiology
