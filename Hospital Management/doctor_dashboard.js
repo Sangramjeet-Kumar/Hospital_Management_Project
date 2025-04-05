@@ -148,6 +148,42 @@ document.addEventListener('DOMContentLoaded', function() {
             // Reload appointments after status update
             const activeFilter = document.querySelector('.appointment-filters .filter-btn.active');
             loadAppointments(activeFilter.getAttribute('data-status'));
+            
+            // Special handling based on new status
+            if (newStatus === 'completed') {
+                // Get appointment details for patient info
+                const appointmentCard = document.querySelector(`[data-appointment-id="${appointmentId}"]`);
+                let patientName = "Unknown Patient";
+                
+                if (appointmentCard) {
+                    const patientElement = appointmentCard.querySelector('.appointment-patient');
+                    if (patientElement) {
+                        patientName = patientElement.textContent.replace('Patient:', '').trim();
+                    }
+                }
+                
+                // Show bed allocation modal
+                alert(`Appointment completed. Please allocate a bed for ${patientName} if needed.`);
+                
+                // Trigger bed allocation modal
+                if (typeof showAllocationModal === 'function') {
+                    showAllocationModal(patientName);
+                } else {
+                    // Fallback if specific function isn't available
+                    const allocationModal = document.getElementById('allocationModal');
+                    if (allocationModal) {
+                        // Try to pre-fill patient name if the field exists
+                        const patientNameInput = document.getElementById('patientName');
+                        if (patientNameInput) {
+                            patientNameInput.value = patientName;
+                        }
+                        allocationModal.style.display = 'block';
+                    }
+                }
+            } else if (newStatus === 'canceled') {
+                // No bed allocation needed for canceled appointments
+                alert('Appointment canceled. No bed will be allocated.');
+            }
         } catch (error) {
             console.error('Error updating appointment status:', error);
             alert('Failed to update appointment status. Please try again.');
@@ -552,4 +588,149 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAppointments();
     loadDoctorProfile();
     loadPatients();
+
+    // Add this function to explicitly show bed allocation modal
+    window.showAllocationModal = function(patientName, patientId) {
+        // Try to find the allocation modal
+        const allocationModal = document.getElementById('bedAllocationModal');
+        
+        if (!allocationModal) {
+            // Create a modal if it doesn't exist
+            const modal = document.createElement('div');
+            modal.id = 'bedAllocationModal';
+            modal.className = 'modal';
+            
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close" onclick="document.getElementById('bedAllocationModal').style.display='none'">&times;</span>
+                    <h2>Allocate Bed for Patient</h2>
+                    <form id="bedAllocationForm">
+                        <div class="form-group">
+                            <label>Patient Name</label>
+                            <input type="text" id="patientNameForBed" value="${patientName || ''}" readonly>
+                            <input type="hidden" id="patientIdForBed" value="${patientId || ''}">
+                        </div>
+                        <div class="form-group">
+                            <label>Ward</label>
+                            <select id="wardForBed" required>
+                                <option value="">Select Ward</option>
+                                <option value="general">General Ward</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="icu">ICU</option>
+                                <option value="pediatric">Pediatric</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bed</label>
+                            <select id="bedNumberForBed" required>
+                                <option value="">Select Ward First</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Admission Notes</label>
+                            <textarea id="admissionNotes" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Allocate Bed</button>
+                    </form>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Add event listener for ward selection to load appropriate beds
+            document.getElementById('wardForBed').addEventListener('change', async function() {
+                const wardValue = this.value;
+                if (!wardValue) return;
+                
+                try {
+                    const response = await fetch(`http://localhost:8080/api/staff/beds?ward=${wardValue}&status=available`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    
+                    const beds = await response.json();
+                    const bedSelect = document.getElementById('bedNumberForBed');
+                    
+                    bedSelect.innerHTML = '<option value="">Select Bed</option>';
+                    beds.forEach(bed => {
+                        const option = document.createElement('option');
+                        option.value = bed.id;
+                        option.textContent = `Bed ${bed.number} (${bed.ward})`;
+                        bedSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error loading beds:', error);
+                    alert('Failed to load available beds. Please try again.');
+                }
+            });
+            
+            // Add event listener for form submission
+            document.getElementById('bedAllocationForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const patientId = document.getElementById('patientIdForBed').value;
+                const bedId = document.getElementById('bedNumberForBed').value;
+                const notes = document.getElementById('admissionNotes').value;
+                
+                if (!bedId) {
+                    alert('Please select a bed');
+                    return;
+                }
+                
+                try {
+                    // If we have a patient ID, use the formal API
+                    if (patientId) {
+                        const response = await fetch('http://localhost:8080/api/doctor/bed/allocate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                patientId: parseInt(patientId),
+                                bedId: parseInt(bedId),
+                                notes: notes
+                            }),
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        
+                        const result = await response.json();
+                        if (result.success) {
+                            alert('Bed allocated successfully');
+                            document.getElementById('bedAllocationModal').style.display = 'none';
+                            // Refresh bed data
+                            if (typeof loadBeds === 'function') {
+                                loadBeds();
+                            }
+                        } else {
+                            alert(`Bed allocation failed: ${result.message}`);
+                        }
+                    } else {
+                        // If no patient ID (just name), use the generic function
+                        alert(`For patient "${document.getElementById('patientNameForBed').value}", please use the staff dashboard to complete bed allocation.`);
+                        document.getElementById('bedAllocationModal').style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Error allocating bed:', error);
+                    alert(`Error allocating bed: ${error.message}`);
+                }
+            });
+        } else {
+            // Update existing modal with patient info
+            const patientNameField = document.getElementById('patientNameForBed');
+            if (patientNameField) {
+                patientNameField.value = patientName || '';
+            }
+            
+            const patientIdField = document.getElementById('patientIdForBed');
+            if (patientIdField && patientId) {
+                patientIdField.value = patientId;
+            }
+        }
+        
+        // Show the modal
+        document.getElementById('bedAllocationModal').style.display = 'block';
+    };
 }); 

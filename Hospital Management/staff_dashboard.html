@@ -217,24 +217,24 @@
     <!-- Discharge Modal -->
     <div id="dischargeModal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Process Discharge</h2>
-            <form id="dischargeForm">
+            <span class="close" onclick="document.getElementById('dischargeModal').style.display='none'">&times;</span>
+            <h2>Discharge Patient</h2>
+            <form id="dischargeForm" onsubmit="dischargePatient(this); return false;">
                 <div class="form-group">
-                    <label>Patient ID</label>
+                    <label>Patient</label>
                     <select name="patientId" required>
-                        <!-- Admitted patients will be populated here -->
+                        <option value="">Select Patient</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Discharge Date</label>
-                    <input type="datetime-local" name="dischargeDate" required>
+                    <input type="date" name="dischargeDate" required>
                 </div>
                 <div class="form-group">
-                    <label>Discharge Notes</label>
-                    <textarea name="dischargeNotes" required></textarea>
+                    <label>Notes</label>
+                    <textarea name="notes" rows="3"></textarea>
                 </div>
-                <button type="submit" class="btn-primary">Process Discharge</button>
+                <button type="submit" class="btn-primary">Discharge Patient</button>
             </form>
         </div>
     </div>
@@ -242,40 +242,26 @@
     <!-- Transfer Modal -->
     <div id="transferModal" class="modal">
         <div class="modal-content">
-            <span class="close">&times;</span>
+            <span class="close" onclick="document.getElementById('transferModal').style.display='none'">&times;</span>
             <h2>Transfer Patient</h2>
-            <form id="transferForm">
+            <form id="transferForm" onsubmit="transferPatient(this); return false;">
                 <div class="form-group">
                     <label>Patient</label>
                     <select name="patientId" required>
-                        <!-- Admitted patients will be populated here -->
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Current Department</label>
-                    <input type="text" id="currentDepartment" disabled>
-                </div>
-                <div class="form-group">
-                    <label>New Department</label>
-                    <select name="newDepartment" required>
-                        <option value="">Select Department</option>
-                        <option value="general">General Ward</option>
-                        <option value="emergency">Emergency</option>
-                        <option value="icu">ICU</option>
-                        <option value="pediatric">Pediatric</option>
+                        <option value="">Select Patient</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>New Bed</label>
-                    <select name="newBed" id="transferBedSelect" required>
-                        <!-- Available beds will be populated here -->
+                    <select name="newBed" required>
+                        <option value="">Select Bed</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Reason for Transfer</label>
-                    <textarea name="transferReason" required></textarea>
+                    <label>Reason</label>
+                    <textarea name="reason" rows="3"></textarea>
                 </div>
-                <button type="submit" class="btn-primary">Process Transfer</button>
+                <button type="submit" class="btn-primary">Transfer Patient</button>
             </form>
         </div>
     </div>

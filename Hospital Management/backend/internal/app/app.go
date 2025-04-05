@@ -55,6 +55,18 @@ func SetupRouter() *mux.Router {
 	r.HandleFunc("/api/doctor/bed/allocate", handlers.AllocateBed).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/doctor/{doctorID}/patients", handlers.GetDoctorPatients).Methods("GET")
 
+	// Staff Dashboard API endpoints
+	r.HandleFunc("/api/staff/stats", handlers.GetStaffStats).Methods("GET")
+	r.HandleFunc("/api/staff/patients", handlers.GetPatientsList).Methods("GET")
+	r.HandleFunc("/api/staff/patient/register", handlers.RegisterPatient).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/staff/patient/discharge", handlers.DischargePatient).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/staff/patient/transfer", handlers.TransferPatient).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/staff/patient/assign-bed", handlers.AssignBedToPatient).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/staff/beds", handlers.GetAvailableBeds).Methods("GET")
+	r.HandleFunc("/api/staff/appointments", handlers.GetStaffAppointments).Methods("GET")
+	r.HandleFunc("/api/staff/{staffID}/profile", handlers.GetStaffProfile).Methods("GET")
+	r.HandleFunc("/api/staff/{staffID}/profile", handlers.UpdateStaffProfile).Methods("PUT", "OPTIONS")
+
 	return r
 }
 
