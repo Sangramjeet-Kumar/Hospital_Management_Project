@@ -35,7 +35,6 @@ func SetupRouter() *mux.Router {
 	r.HandleFunc("/api/admin/stats", handlers.GetAdminStats).Methods("GET")
 	r.HandleFunc("/api/admin/activity", handlers.GetRecentActivity).Methods("GET")
 	r.HandleFunc("/api/patients", handlers.GetPatients).Methods("GET")
-	r.HandleFunc("/api/patients", handlers.CreatePatient).Methods("POST", "OPTIONS")
 
 	// Bed management API endpoints
 	r.HandleFunc("/api/beds/types", handlers.GetBedTypes).Methods("GET")
@@ -44,7 +43,6 @@ func SetupRouter() *mux.Router {
 	r.HandleFunc("/api/beds/assignments", handlers.GetBedAssignments).Methods("GET")
 	r.HandleFunc("/api/beds/assignments/add", handlers.CreateBedAssignment).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/beds/stats", handlers.GetBedStats).Methods("GET")
-	r.HandleFunc("/api/beds/sync", handlers.SyncBedsCount).Methods("GET", "POST")
 
 	// Hospital management API endpoints
 	r.HandleFunc("/api/hospitals", handlers.GetHospitals).Methods("GET")

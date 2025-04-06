@@ -151,16 +151,10 @@
                         <input type="text" id="patientSearch" placeholder="Search patients...">
                         <i class="fas fa-search"></i>
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="add-btn" onclick="document.getElementById('new-patient-modal').style.display='block'">
-                            <i class="fas fa-plus"></i>
-                            Add New Patient
-                        </button>
-                        <button class="btn" onclick="refreshPatientsData()">
-                            <i class="fas fa-sync-alt"></i>
-                            Refresh
-                        </button>
-                    </div>
+                    <button class="add-btn">
+                        <i class="fas fa-plus"></i>
+                        Add New Patient
+                    </button>
                 </div>
                 <div class="table-container">
                     <table class="data-table">
@@ -399,9 +393,9 @@
                             <select id="patientSelect" required>
                                 <option value="">Select Patient</option>
                             </select>
-                           
+                            <button type="button" id="addNewPatientBtn" class="add-new-btn">+ Add New Patient</button>
                         </div>
-                       
+                        <small class="form-help">Only patients without current bed assignments are shown</small>
                     </div>
                 </div>
                 
@@ -509,45 +503,11 @@
         </div>
     </div>
 
-   
-
-    <!-- New Patient Modal -->
-    <div id="new-patient-modal" class="modal" style="background-color: rgba(0, 0, 0, 0.5); z-index: 9999;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Add New Patient</h2>
-                <span class="close" onclick="document.getElementById('new-patient-modal').style.display='none'">&times;</span>
-            </div>
-            <div class="modal-body">
-                <form id="new-patient-form" onsubmit="return submitNewPatient(event);">
-                    <div class="form-group">
-                        <label for="patient-name">Full Name:</label>
-                        <input type="text" id="patient-name" name="patient-name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="patient-contact">Contact Number:</label>
-                        <input type="text" id="patient-contact" name="patient-contact" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="patient-email">Email:</label>
-                        <input type="email" id="patient-email" name="patient-email">
-                    </div>
-                    <div class="form-group">
-                        <label for="patient-gender">Gender:</label>
-                        <select id="patient-gender" name="patient-gender" required>
-                            <option value="">Select Gender</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">Add Patient</button>
-                        <button type="button" class="btn" onclick="document.getElementById('new-patient-modal').style.display='none'">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+    <!-- Test Links For Debugging -->
+    <div style="position: fixed; bottom: 10px; right: 10px; z-index: 9999; background: white; padding: 10px; border: 1px solid #ddd;">
+        <button onclick="openBedAssignmentModal()">Test Assignment Modal</button>
+        <button onclick="openNewBedModal()">Test Bed Modal</button>
+        <button onclick="clearAllBeds()" style="background-color: #ffebee; color: #c62828;">Clear All Beds</button>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

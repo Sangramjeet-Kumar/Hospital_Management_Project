@@ -22,19 +22,6 @@ type Activity struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-// Patient struct represents the patient data
-type PatientRequest struct {
-	FullName      string `json:"full_name"`
-	ContactNumber string `json:"contact_number"`
-	Email         string `json:"email"`
-	Gender        string `json:"gender"`
-	Address       string `json:"address,omitempty"`
-	City          string `json:"city,omitempty"`
-	State         string `json:"state,omitempty"`
-	PinCode       string `json:"pin_code,omitempty"`
-	Adhar         string `json:"adhar,omitempty"`
-}
-
 func GetAdminStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -184,72 +171,4 @@ func GetRecentActivity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(activities)
-}
-
-// CreatePatient handles creating a new patient
-func CreatePatient(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	var patient PatientRequest
-	err := json.NewDecoder(r.Body).Decode(&patient)
-	if err != nil {
-		log.Printf("Error decoding patient data: %v", err)
-		sendJSONError(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	// Validate required fields
-	if patient.FullName == "" || patient.ContactNumber == "" || patient.Gender == "" {
-		sendJSONError(w, "Full name, contact number, and gender are required", http.StatusBadRequest)
-		return
-	}
-
-	// Insert patient into database
-	query := `
-		INSERT INTO Patients (FullName, ContactNumber, Email, Gender, Address, City, State, PinCode, Adhar)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`
-
-	result, err := database.DB.Exec(
-		query,
-		patient.FullName,
-		patient.ContactNumber,
-		patient.Email,
-		patient.Gender,
-		patient.Address,
-		patient.City,
-		patient.State,
-		patient.PinCode,
-		patient.Adhar,
-	)
-
-	if err != nil {
-		log.Printf("Error inserting patient: %v", err)
-		sendJSONError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	patientID, err := result.LastInsertId()
-	if err != nil {
-		log.Printf("Error getting patient ID: %v", err)
-		sendJSONError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	// Return success response
-	response := map[string]interface{}{
-		"status":     "success",
-		"patient_id": patientID,
-		"message":    "Patient created successfully",
-	}
-
-	json.NewEncoder(w).Encode(response)
 }
