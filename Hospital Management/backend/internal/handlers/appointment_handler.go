@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"hospital-management/backend/internal/database"
@@ -408,4 +409,97 @@ func UpdateAppointmentStatus(w http.ResponseWriter, r *http.Request) {
 		"status":  "success",
 		"message": "Appointment status updated successfully",
 	})
+}
+
+// GetDoctorAppointments handles requests for a specific doctor's appointments
+func GetDoctorAppointments(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+	// Handle preflight request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Get doctor ID from URL parameters
+	vars := mux.Vars(r)
+	doctorID := vars["doctorID"]
+	if doctorID == "" {
+		sendJSONError(w, "Doctor ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Get status filter from query parameters
+	status := r.URL.Query().Get("status")
+	var statusFilter string
+	if status != "" && status != "all" {
+		statusFilter = "AND a.Status = ?"
+	}
+
+	query := fmt.Sprintf(`
+        SELECT 
+            a.AppointmentID,
+            d.FullName as DoctorName,
+            p.FullName as PatientName,
+            a.AppointmentDate,
+            a.AppointmentTime,
+            a.Status,
+            a.Description
+        FROM Appointment a
+        JOIN Doctors d ON a.DoctorID = d.DoctorID
+        JOIN Patients p ON a.PatientID = p.PatientID
+        WHERE a.DoctorID = ? %s
+        ORDER BY a.AppointmentDate DESC, a.AppointmentTime DESC`, statusFilter)
+
+	var rows *sql.Rows
+	var err error
+
+	if statusFilter != "" {
+		rows, err = database.DB.Query(query, doctorID, status)
+	} else {
+		rows, err = database.DB.Query(query, doctorID)
+	}
+
+	if err != nil {
+		log.Printf("Database error: %v", err)
+		sendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var appointments []AppointmentResponse
+	for rows.Next() {
+		var apt AppointmentResponse
+		err := rows.Scan(
+			&apt.AppointmentID,
+			&apt.DoctorName,
+			&apt.PatientName,
+			&apt.AppointmentDate,
+			&apt.AppointmentTime,
+			&apt.Status,
+			&apt.Description,
+		)
+		if err != nil {
+			log.Printf("Row scan error: %v", err)
+			sendJSONError(w, "Data parsing error", http.StatusInternalServerError)
+			return
+		}
+		appointments = append(appointments, apt)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Rows error: %v", err)
+		sendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(appointments); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+		sendJSONError(w, "JSON encoding error", http.StatusInternalServerError)
+		return
+	}
 }

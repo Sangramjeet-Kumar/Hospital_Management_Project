@@ -329,46 +329,29 @@ document.addEventListener('DOMContentLoaded', function() {
             if (departmentFilter !== 'all') queryParams.append('department', departmentFilter);
             if (dateFilter) queryParams.append('date', dateFilter);
 
-            // Try up to 3 times
-            for (let attempt = 0; attempt < 3; attempt++) {
-                try {
-                    const response = await fetch(`http://localhost:8080/api/staff/appointments?${queryParams}`);
-                    
-                    if (response.ok) {
-                        const appointments = await response.json();
-                        renderAppointments(appointments);
-                        
-                        // Also populate the doctor filter if needed
-                        if (!document.getElementById('doctorFilter').hasChildNodes()) {
-                            await populateDoctorFilter();
-                        }
-                        // Also populate the department filter if needed
-                        if (!document.getElementById('departmentFilter').hasChildNodes()) {
-                            await populateDepartmentFilter();
-                        }
-                        return; // Success, exit the function
-                    }
-                    
-                    console.log(`Attempt ${attempt + 1} failed with status: ${response.status}`);
-                    
-                    // If we've made our last attempt, throw an error
-                    if (attempt === 2) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-                    
-                    // Wait before trying again (exponential backoff)
-                    await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt)));
-                } catch (retryError) {
-                    console.error(`Retry attempt ${attempt + 1} error:`, retryError);
-                    
-                    // If this is the last attempt, re-throw the error
-                    if (attempt === 2) {
-                        throw retryError;
-                    }
-                    
-                    // Wait before trying again (exponential backoff)
-                    await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, attempt)));
-                }
+            const response = await fetch(`http://localhost:8080/api/staff/appointments?${queryParams}`);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Error response: ${errorText}`);
+                throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorText}`);
+            }
+
+            const appointments = await response.json();
+            
+            if (!Array.isArray(appointments)) {
+                throw new Error('Invalid response format: expected an array of appointments');
+            }
+
+            renderAppointments(appointments);
+            
+            // Also populate the doctor filter if needed
+            if (!document.getElementById('doctorFilter').hasChildNodes()) {
+                await populateDoctorFilter();
+            }
+            // Also populate the department filter if needed
+            if (!document.getElementById('departmentFilter').hasChildNodes()) {
+                await populateDepartmentFilter();
             }
         } catch (error) {
             console.error('Error fetching appointments:', error);
@@ -383,42 +366,44 @@ document.addEventListener('DOMContentLoaded', function() {
         appointmentsGrid.innerHTML = '';
 
         if (appointments.length === 0) {
-            appointmentsGrid.innerHTML = '<div class="no-data">No appointments found for the selected filters.</div>';
+            appointmentsGrid.innerHTML = '<div class="no-data">No appointments found.</div>';
             return;
         }
-        
+
         appointments.forEach(apt => {
             const appointmentCard = document.createElement('div');
-            appointmentCard.className = `appointment-card ${apt.status}`;
-            appointmentCard.setAttribute('data-appointment-id', apt.id);
-            
-            let checkInButton = '';
-            if (apt.status === 'scheduled') {
-                checkInButton = `<button class="btn-primary check-in-btn" onclick="checkInPatient(${apt.id})">Check In</button>`;
+            appointmentCard.className = 'appointment-card';
+            appointmentCard.setAttribute('data-appointment-id', apt.appointment_id);
+
+            let formattedDate = "No date";
+            if (apt.appointment_date) {
+                try {
+                    const appointmentDate = new Date(apt.appointment_date);
+                    formattedDate = appointmentDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    });
+                } catch (e) {
+                    console.error("Error formatting date:", e);
+                    formattedDate = apt.appointment_date;
+                }
             }
-            
+
             appointmentCard.innerHTML = `
-                <div class="appointment-header">
-                    <span class="department-badge">${apt.department}</span>
-                <span class="status-badge ${apt.status}">${apt.status}</span>
-                </div>
-                <div class="appointment-body">
-                    <div class="appointment-patient">
-                        <strong>Patient:</strong> ${apt.patient}
-                    </div>
-                    <div class="appointment-doctor">
-                        <strong>Doctor:</strong> ${apt.doctor}
-                    </div>
-                    <div class="appointment-time">
-                        <i class="fas fa-calendar-alt"></i> ${apt.date}, ${apt.time}
-                    </div>
-                    <div class="appointment-description">${apt.description || "No description provided"}</div>
+                <div class="appointment-info">
+                    <h3>${apt.patient_name}</h3>
+                    <p><strong>Doctor:</strong> ${apt.doctor_name}</p>
+                    <p><strong>Date:</strong> ${formattedDate}</p>
+                    <p><strong>Time:</strong> ${apt.appointment_time}</p>
+                    <span class="status-badge ${apt.status}">${apt.status}</span>
                 </div>
                 <div class="appointment-actions">
-                    ${checkInButton}
+                    <button class="btn-action" onclick="updateAppointmentStatus(${apt.appointment_id})">
+                        <i class="fas fa-edit"></i> Update Status
+                    </button>
                 </div>
             `;
-            
             appointmentsGrid.appendChild(appointmentCard);
         });
     }

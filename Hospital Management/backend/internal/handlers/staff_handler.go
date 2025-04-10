@@ -24,14 +24,14 @@ type StaffDashboardStats struct {
 	RegisteredPatients int `json:"registeredPatients"`
 }
 
-// GetStaffStats returns statistics for the staff dashboard
-func GetStaffStats(w http.ResponseWriter, r *http.Request) {
+// GetStaffDashboard returns statistics for the staff dashboard
+func GetStaffDashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	var stats StaffDashboardStats
 
-	// Try to get bed statistics, use default values if there's an error
+	// Get bed statistics
 	err := database.DB.QueryRow(`
 		SELECT 
 			COUNT(*) as TotalBeds,
@@ -49,7 +49,7 @@ func GetStaffStats(w http.ResponseWriter, r *http.Request) {
 		stats.AvailableBeds = 25
 	}
 
-	// Try to get appointment statistics, use default values if there's an error
+	// Get appointment statistics
 	today := time.Now().Format("2006-01-02")
 	err = database.DB.QueryRow(`
 		SELECT 
@@ -65,7 +65,7 @@ func GetStaffStats(w http.ResponseWriter, r *http.Request) {
 		stats.TodayAppointments = 10
 	}
 
-	// Try to get available doctors count, use default value if there's an error
+	// Get available doctors count
 	err = database.DB.QueryRow(`
 		SELECT COUNT(*) FROM Doctors
 	`).Scan(&stats.AvailableDoctors)
@@ -76,7 +76,7 @@ func GetStaffStats(w http.ResponseWriter, r *http.Request) {
 		stats.AvailableDoctors = 15
 	}
 
-	// Try to get registered patients count, use default value if there's an error
+	// Get registered patients count
 	err = database.DB.QueryRow(`
 		SELECT COUNT(*) FROM Patients
 	`).Scan(&stats.RegisteredPatients)
@@ -658,6 +658,7 @@ func GetStaffAppointments(w http.ResponseWriter, r *http.Request) {
 	doctorFilter := r.URL.Query().Get("doctor")
 	departmentFilter := r.URL.Query().Get("department")
 	dateFilter := r.URL.Query().Get("date")
+	statusFilter := r.URL.Query().Get("status")
 
 	query := `
 		SELECT 
@@ -695,65 +696,18 @@ func GetStaffAppointments(w http.ResponseWriter, r *http.Request) {
 		args = append(args, dateFilter)
 	}
 
+	if statusFilter != "" && statusFilter != "all" {
+		query += " AND a.Status = ?"
+		args = append(args, statusFilter)
+	}
+
 	query += " ORDER BY a.AppointmentDate, a.AppointmentTime"
 
 	rows, err := database.DB.Query(query, args...)
 	if err != nil {
 		log.Printf("Error querying appointments: %v", err)
-		// Instead of returning an error, return sample data
-		sampleAppointments := []map[string]interface{}{}
-
-		// Generate sample appointments
-		departments := []string{"Cardiology", "Neurology", "Pediatrics", "Orthopedics", "Ophthalmology"}
-		doctorNames := []string{"Dr. Smith", "Dr. Johnson", "Dr. Chen", "Dr. Garcia", "Dr. Wilson"}
-		patientNames := []string{"John Doe", "Jane Smith", "Robert Johnson", "Maria Garcia", "David Lee"}
-		statuses := []string{"scheduled", "checked-in", "completed", "cancelled"}
-		times := []string{"09:00", "10:30", "11:15", "13:00", "14:30", "16:00"}
-
-		today := time.Now()
-
-		for i := 1; i <= 15; i++ {
-			// Pick random values from arrays
-			dept := departments[i%len(departments)]
-			doctor := doctorNames[i%len(doctorNames)]
-			patient := patientNames[i%len(patientNames)]
-			status := statuses[i%len(statuses)]
-			aptTime := times[i%len(times)]
-
-			// Generate dates: some today, some in past, some in future
-			daysOffset := i - 7 // Range from -6 to +8
-			aptDate := today.AddDate(0, 0, daysOffset).Format("2006-01-02")
-
-			// Apply filters
-			if doctorFilter != "" && doctorFilter != "all" && strconv.Itoa(i%5+1) != doctorFilter {
-				continue
-			}
-
-			if departmentFilter != "" && departmentFilter != "all" && dept != departmentFilter {
-				continue
-			}
-
-			if dateFilter != "" && aptDate != dateFilter {
-				continue
-			}
-
-			appointment := map[string]interface{}{
-				"id":          i,
-				"patient":     patient,
-				"patientId":   i + 100,
-				"doctor":      doctor,
-				"doctorId":    i%5 + 1,
-				"department":  dept,
-				"date":        aptDate,
-				"time":        aptTime,
-				"description": "Regular checkup",
-				"status":      status,
-			}
-
-			sampleAppointments = append(sampleAppointments, appointment)
-		}
-
-		json.NewEncoder(w).Encode(sampleAppointments)
+		// Return empty array instead of sample data
+		json.NewEncoder(w).Encode([]map[string]interface{}{})
 		return
 	}
 	defer rows.Close()
@@ -794,6 +748,12 @@ func GetStaffAppointments(w http.ResponseWriter, r *http.Request) {
 		}
 
 		appointments = append(appointments, appointment)
+	}
+
+	// If no appointments found, return empty array
+	if len(appointments) == 0 {
+		json.NewEncoder(w).Encode([]map[string]interface{}{})
+		return
 	}
 
 	json.NewEncoder(w).Encode(appointments)

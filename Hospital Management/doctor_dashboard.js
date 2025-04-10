@@ -54,6 +54,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             const appointments = await response.json();
             console.log("Appointments data:", appointments);
+            
+            if (!Array.isArray(appointments)) {
+                throw new Error('Invalid response format: expected an array of appointments');
+            }
+            
             renderAppointments(appointments, status);
         } catch (error) {
             console.error('Error loading appointments:', error);
@@ -73,12 +78,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Check the structure of the appointment object and adapt accordingly
             console.log("Appointment data:", apt);
             
-            let patientName = apt.patient ? apt.patient.full_name : 
-                              (apt.patient_name ? apt.patient_name : "Unknown Patient");
-            
-            let appointmentTime = apt.appointment_time || apt.appointmentTime || "No time specified";
+            let patientName = apt.patient_name || "Unknown Patient";
+            let appointmentTime = apt.appointment_time || "No time specified";
             let appointmentStatus = apt.status || "scheduled";
-            let appointmentId = apt.appointment_id || apt.appointmentID;
+            let appointmentId = apt.appointment_id;
             
             // Handle appointment date based on structure
             let formattedDate = "No date";
@@ -94,22 +97,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error("Error formatting date:", e);
                     formattedDate = apt.appointment_date;
                 }
-            } else if (apt.appointmentDate) {
-                try {
-                    const appointmentDate = new Date(apt.appointmentDate);
-                    formattedDate = appointmentDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    });
-                } catch (e) {
-                    console.error("Error formatting date:", e);
-                    formattedDate = apt.appointmentDate;
-                }
             }
 
             const appointmentCard = document.createElement('div');
             appointmentCard.className = `appointment-card ${appointmentStatus}`;
+            appointmentCard.setAttribute('data-appointment-id', appointmentId);
             appointmentCard.innerHTML = `
                 <div class="appointment-time">${appointmentTime}</div>
                 <div class="appointment-details">

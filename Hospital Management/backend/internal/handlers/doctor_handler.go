@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"hospital-management/backend/internal/database"
 	"hospital-management/backend/internal/models"
 	"log"
@@ -12,101 +11,6 @@ import (
 
 	"github.com/gorilla/mux"
 )
-
-// GetDoctorAppointments retrieves appointments for a specific doctor
-func GetDoctorAppointments(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	// Get doctorID from request params
-	vars := mux.Vars(r)
-	doctorID, err := strconv.Atoi(vars["doctorID"])
-	if err != nil {
-		log.Printf("Invalid doctor ID: %v", err)
-		sendJSONError(w, "Invalid doctor ID", http.StatusBadRequest)
-		return
-	}
-
-	// Get status filter (if present)
-	status := r.URL.Query().Get("status")
-	var statusFilter string
-	if status != "" && status != "all" {
-		statusFilter = fmt.Sprintf(" AND a.Status = '%s'", status)
-		log.Printf("Filtering appointments by status: %s", status)
-	}
-
-	// Get date filter (default to today)
-	dateFilter := r.URL.Query().Get("date")
-	if dateFilter == "" {
-		dateFilter = time.Now().Format("2006-01-02")
-	}
-
-	// Query for appointments
-	query := `
-		SELECT 
-			a.AppointmentID, 
-			a.PatientID, 
-			p.FullName as PatientName, 
-			a.DoctorID, 
-			d.FullName as DoctorName,
-			a.AppointmentDate, 
-			a.AppointmentTime, 
-			a.Description, 
-			a.Status
-		FROM Appointment a
-		JOIN Patients p ON a.PatientID = p.PatientID
-		JOIN Doctors d ON a.DoctorID = d.DoctorID
-		WHERE a.DoctorID = ?` + statusFilter + `
-		ORDER BY a.AppointmentTime ASC
-	`
-
-	log.Printf("Executing query: %s with doctorID: %d, status: %s", query, doctorID, status)
-	rows, err := database.DB.Query(query, doctorID)
-	if err != nil {
-		log.Printf("Error querying appointments: %v", err)
-		sendJSONError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var appointments []map[string]interface{}
-	for rows.Next() {
-		var appointmentID, patientID, doctorID int
-		var patientName, doctorName, appointmentTime, description, status, appointmentDate string
-
-		err := rows.Scan(
-			&appointmentID,
-			&patientID,
-			&patientName,
-			&doctorID,
-			&doctorName,
-			&appointmentDate,
-			&appointmentTime,
-			&description,
-			&status,
-		)
-		if err != nil {
-			log.Printf("Error scanning appointment: %v", err)
-			continue
-		}
-
-		appointment := map[string]interface{}{
-			"appointment_id":   appointmentID,
-			"patient_id":       patientID,
-			"patient_name":     patientName,
-			"doctor_id":        doctorID,
-			"doctor_name":      doctorName,
-			"appointment_date": appointmentDate,
-			"appointment_time": appointmentTime,
-			"description":      description,
-			"status":           status,
-		}
-
-		appointments = append(appointments, appointment)
-	}
-
-	json.NewEncoder(w).Encode(appointments)
-}
 
 // GetDoctorProfile retrieves the profile information for a specific doctor
 func GetDoctorProfile(w http.ResponseWriter, r *http.Request) {
@@ -242,9 +146,9 @@ func GetDoctorBeds(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Query for beds - simplified to avoid joining with appointment table which might be causing the error
+	// Query for beds - join with Appointment table to get only beds assigned to patients under this doctor's care
 	query := `
-		SELECT 
+		SELECT DISTINCT
 			bi.BedID, 
 			bi.HospitalID, 
 			h.Address as HospitalName,
@@ -260,12 +164,13 @@ func GetDoctorBeds(w http.ResponseWriter, r *http.Request) {
 		JOIN Hospital h ON bi.HospitalID = h.HospitalID
 		LEFT JOIN BedAssignments ba ON bi.BedID = ba.BedID AND (ba.DischargeDate IS NULL OR ba.DischargeDate > CURDATE())
 		LEFT JOIN Patients p ON ba.PatientID = p.PatientID
-		WHERE 1=1` + statusFilter + `
+		LEFT JOIN Appointment a ON p.PatientID = a.PatientID AND a.DoctorID = ?
+		WHERE a.DoctorID = ?` + statusFilter + `
 		ORDER BY bi.BedID
 	`
 
 	log.Printf("Executing query: %s with doctorID: %d", query, doctorID)
-	rows, err := database.DB.Query(query)
+	rows, err := database.DB.Query(query, doctorID, doctorID)
 	if err != nil {
 		log.Printf("Error querying beds: %v", err)
 		sendJSONError(w, "Database error", http.StatusInternalServerError)
