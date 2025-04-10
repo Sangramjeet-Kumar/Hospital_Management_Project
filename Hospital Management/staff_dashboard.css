@@ -332,108 +332,217 @@ section h2::after {
     color: var(--warning-color);
 }
 
+.status-badge.admitted {
+    background-color: rgba(5, 150, 105, 0.1);
+    color: var(--success-color);
+}
+
+.status-badge.discharged {
+    background-color: rgba(100, 100, 100, 0.1);
+    color: #666;
+}
+
+.status-badge.awaiting-bed, .status-badge.awaiting {
+    background-color: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.status-badge.registered {
+    background-color: rgba(217, 119, 6, 0.1);
+    color: var(--warning-color);
+}
+
 /* Modal Styles */
 .modal {
     display: none;
     position: fixed;
-    top: 0;
+    z-index: 1000;
     left: 0;
+    top: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    backdrop-filter: blur(5px);
 }
 
 .modal-content {
-    background-color: white;
-    width: 600px;
-    max-width: 90%;
-    margin: 50px auto;
-    padding: 30px;
-    border-radius: 15px;
-    position: relative;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    animation: modalSlideIn 0.3s ease;
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 600px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    animation: modalSlideDown 0.3s ease-out;
 }
 
-.modal-content h2 {
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 2px solid var(--border-color);
+@keyframes modalSlideDown {
+    from { transform: translateY(-30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 .close {
-    position: absolute;
-    right: 25px;
-    top: 25px;
-    font-size: 24px;
+    color: #888;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
     cursor: pointer;
-    color: var(--text-color);
-    transition: all 0.3s ease;
+    transition: color 0.2s;
 }
 
 .close:hover {
-    color: var(--danger-color);
-    transform: rotate(90deg);
+    color: #333;
 }
 
 /* Form Styles */
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
     font-weight: 500;
-    color: var(--text-color);
 }
 
-.form-group input,
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="time"],
+.form-group input[type="number"],
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 12px;
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
 }
 
-.form-group input[readonly] {
-    background-color: var(--light-gray);
-    cursor: not-allowed;
-    opacity: 0.8;
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
 }
 
-.form-group input:not([readonly]):focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+.form-group input[type="checkbox"] {
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Message Container */
+#message-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1100;
+    width: 300px;
+}
+
+.message {
+    margin-bottom: 10px;
+    padding: 12px 15px;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    animation: messageSlideIn 0.3s ease-out;
+}
+
+@keyframes messageSlideIn {
+    from { transform: translateX(30px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.message.fade-out {
+    animation: messageSlideOut 0.5s ease-in forwards;
+}
+
+@keyframes messageSlideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(30px); opacity: 0; }
+}
+
+.message.info {
+    background-color: #e8f4fd;
+    border-left: 4px solid #2196F3;
+    color: #0b5394;
+}
+
+.message.success {
+    background-color: #e9f9e7;
+    border-left: 4px solid #4CAF50;
+    color: #1b5e20;
+}
+
+.message.error {
+    background-color: #fde8e8;
+    border-left: 4px solid #F44336;
+    color: #b71c1c;
+}
+
+.message.warning {
+    background-color: #fff9e6;
+    border-left: 4px solid #FFC107;
+    color: #856404;
 }
 
 /* Button Styles */
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    background-color: #4285f4;
     color: white;
     border: none;
-    padding: 12px 25px;
-    border-radius: 8px;
+    padding: 10px 15px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.3s ease;
     font-weight: 500;
-    font-size: 1rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
+    transition: background-color 0.2s;
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--hover-shadow);
+    background-color: #3367d6;
+}
+
+.btn-action {
+    padding: 6px 12px;
+    margin-right: 5px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.discharge-btn {
+    background-color: #ff6b6b;
+    color: white;
+}
+
+.discharge-btn:hover {
+    background-color: #e53935;
+}
+
+.transfer-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.transfer-btn:hover {
+    background-color: #2980b9;
+}
+
+.bed-assign-btn {
+    background-color: #27ae60;
+    color: white;
+}
+
+.bed-assign-btn:hover {
+    background-color: #219a52;
+}
+
+.schedule-btn {
+    background-color: #9b59b6;
+    color: white;
+}
+
+.schedule-btn:hover {
+    background-color: #8e44ad;
 }
 
 /* Animations */
@@ -457,4 +566,91 @@ section h2::after {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* Error messages */
+.error {
+    background-color: #fff4f4;
+    border-left: 4px solid #ff5252;
+    color: #cc0000;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.no-data {
+    text-align: center;
+    padding: 30px;
+    color: #888;
+    font-style: italic;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+
+.refresh-btn {
+    background-color: #4a90e2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-weight: 500;
+}
+
+.refresh-btn:hover {
+    background-color: #357ab8;
+}
+
+/* Bed assignment policy styles */
+.policy-note {
+    background-color: #f8f9fa;
+    border-left: 3px solid #17a2b8;
+    padding: 10px;
+    margin: 10px 0;
+    font-size: 0.9rem;
+    color: #566a7f;
+}
+
+.policy-note i {
+    color: #17a2b8;
+    margin-right: 5px;
+}
+
+.emergency-container {
+    margin: 10px 0 15px;
+}
+
+.emergency-checkbox {
+    display: flex;
+    align-items: center;
+    background-color: #fff8f8;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #ffcdd2;
+    cursor: pointer;
+}
+
+.emergency-checkbox input {
+    margin-right: 10px;
+}
+
+.emergency-checkbox:hover {
+    background-color: #fff0f0;
+}
+
+/* Disable visual styling */
+select:disabled {
+    background-color: #f2f2f2;
+    color: #999;
+    cursor: not-allowed;
 } 
