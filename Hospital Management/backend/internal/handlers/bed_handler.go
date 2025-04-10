@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"hospital-management/backend/internal/database"
 	"hospital-management/backend/internal/models"
 	"io"
@@ -237,6 +238,23 @@ func GetBedAssignments(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
+	// Check if the table exists or has any rows
+	var count int
+	err := database.DB.QueryRow("SELECT COUNT(*) FROM BedAssignments").Scan(&count)
+	if err != nil {
+		log.Printf("Error checking BedAssignments table: %v", err)
+		// Return empty array instead of error
+		json.NewEncoder(w).Encode([]models.BedAssignment{})
+		return
+	}
+
+	// If table is empty, return empty array immediately
+	if count == 0 {
+		log.Printf("BedAssignments table is empty, returning empty array")
+		json.NewEncoder(w).Encode([]models.BedAssignment{})
+		return
+	}
+
 	rows, err := database.DB.Query(`
 		SELECT 
 			ba.AssignmentID, 
@@ -258,7 +276,8 @@ func GetBedAssignments(w http.ResponseWriter, r *http.Request) {
 	`)
 	if err != nil {
 		log.Printf("Error querying bed assignments: %v", err)
-		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
+		// Return empty array instead of error
+		json.NewEncoder(w).Encode([]models.BedAssignment{})
 		return
 	}
 	defer rows.Close()
@@ -322,6 +341,29 @@ func CreateBedAssignment(w http.ResponseWriter, r *http.Request) {
 	// Validate required fields
 	if assignment.BedID == 0 || assignment.PatientID == 0 || assignment.AdmissionDate == "" {
 		bedSendJSONError(w, "BedID, PatientID, and AdmissionDate are required", http.StatusBadRequest)
+		return
+	}
+
+	// Check if patient already has an active bed assignment
+	var hasExistingAssignment bool
+	err = database.DB.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 
+			FROM BedAssignments 
+			WHERE PatientID = ? 
+			AND (DischargeDate IS NULL OR DischargeDate > CURDATE())
+		)
+	`, assignment.PatientID).Scan(&hasExistingAssignment)
+
+	if err != nil {
+		log.Printf("Error checking existing patient assignments: %v", err)
+		bedSendJSONError(w, "Error checking patient assignment status", http.StatusInternalServerError)
+		return
+	}
+
+	if hasExistingAssignment {
+		log.Printf("Patient %d already has an active bed assignment", assignment.PatientID)
+		bedSendJSONError(w, "This patient already has an active bed assignment. Please discharge the patient from their current bed first.", http.StatusConflict)
 		return
 	}
 
@@ -492,6 +534,152 @@ func GetBedStats(w http.ResponseWriter, r *http.Request) {
 
 	stats.BedTypes = bedTypes
 	json.NewEncoder(w).Encode(stats)
+}
+
+// SyncBedsCount synchronizes the BedsCount table with actual data from BedInventory and BedAssignments
+func SyncBedsCount(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Start a transaction for consistency
+	tx, err := database.DB.Begin()
+	if err != nil {
+		log.Printf("Error starting transaction: %v", err)
+		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback() // Will be ignored if tx.Commit() is called
+
+	// 1. Get a list of all hospital and bed type combinations
+	rows, err := tx.Query(`
+		SELECT DISTINCT h.HospitalID, bt.BedType 
+		FROM Hospital h
+		CROSS JOIN BedTypes bt
+		WHERE EXISTS (
+			SELECT 1 
+			FROM BedInventory bi 
+			WHERE bi.HospitalID = h.HospitalID AND bi.BedType = bt.BedType
+		)
+	`)
+	if err != nil {
+		log.Printf("Error getting hospital and bed type combinations: %v", err)
+		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	type HospitalBedType struct {
+		HospitalID int
+		BedType    string
+	}
+
+	var combinations []HospitalBedType
+	for rows.Next() {
+		var combo HospitalBedType
+		if err := rows.Scan(&combo.HospitalID, &combo.BedType); err != nil {
+			log.Printf("Error scanning hospital and bed type: %v", err)
+			continue
+		}
+		combinations = append(combinations, combo)
+	}
+	rows.Close()
+
+	if len(combinations) == 0 {
+		log.Println("No hospital and bed type combinations found")
+		bedSendJSONError(w, "No data to synchronize", http.StatusNotFound)
+		return
+	}
+
+	// 2. For each combination, calculate the correct counts
+	var updates []string
+	for _, combo := range combinations {
+		// Get total beds
+		var totalBeds int
+		err := tx.QueryRow(`
+			SELECT COUNT(*) 
+			FROM BedInventory 
+			WHERE HospitalID = ? AND BedType = ?
+		`, combo.HospitalID, combo.BedType).Scan(&totalBeds)
+
+		if err != nil {
+			log.Printf("Error counting total beds for hospital %d, bed type %s: %v",
+				combo.HospitalID, combo.BedType, err)
+			continue
+		}
+
+		// Get occupied beds
+		var occupiedBeds int
+		err = tx.QueryRow(`
+			SELECT COUNT(*) 
+			FROM BedInventory bi
+			JOIN BedAssignments ba ON bi.BedID = ba.BedID
+			WHERE bi.HospitalID = ? 
+			AND bi.BedType = ? 
+			AND (ba.DischargeDate IS NULL OR ba.DischargeDate > CURDATE())
+		`, combo.HospitalID, combo.BedType).Scan(&occupiedBeds)
+
+		if err != nil {
+			log.Printf("Error counting occupied beds for hospital %d, bed type %s: %v",
+				combo.HospitalID, combo.BedType, err)
+			continue
+		}
+
+		// Calculate vacant beds
+		vacantBeds := totalBeds - occupiedBeds
+
+		// 3. Update or insert the BedsCount record
+		var exists bool
+		err = tx.QueryRow(`
+			SELECT EXISTS (
+				SELECT 1 
+				FROM BedsCount 
+				WHERE HospitalID = ? AND BedType = ?
+			)
+		`, combo.HospitalID, combo.BedType).Scan(&exists)
+
+		if err != nil {
+			log.Printf("Error checking if BedsCount record exists: %v", err)
+			continue
+		}
+
+		if exists {
+			_, err = tx.Exec(`
+				UPDATE BedsCount 
+				SET TotalBeds = ?, OccupiedBeds = ?, VacantBeds = ?
+				WHERE HospitalID = ? AND BedType = ?
+			`, totalBeds, occupiedBeds, vacantBeds, combo.HospitalID, combo.BedType)
+		} else {
+			_, err = tx.Exec(`
+				INSERT INTO BedsCount (HospitalID, BedType, TotalBeds, OccupiedBeds, VacantBeds)
+				VALUES (?, ?, ?, ?, ?)
+			`, combo.HospitalID, combo.BedType, totalBeds, occupiedBeds, vacantBeds)
+		}
+
+		if err != nil {
+			log.Printf("Error updating BedsCount for hospital %d, bed type %s: %v",
+				combo.HospitalID, combo.BedType, err)
+			continue
+		}
+
+		updates = append(updates, fmt.Sprintf("Hospital %d, %s: %d total, %d occupied, %d vacant",
+			combo.HospitalID, combo.BedType, totalBeds, occupiedBeds, vacantBeds))
+	}
+
+	// 4. Commit the transaction
+	if err := tx.Commit(); err != nil {
+		log.Printf("Error committing transaction: %v", err)
+		bedSendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// 5. Return success response
+	response := map[string]interface{}{
+		"success": true,
+		"message": "BedsCount table synchronized successfully",
+		"updates": updates,
+	}
+
+	log.Println("BedsCount table synchronized successfully")
+	json.NewEncoder(w).Encode(response)
 }
 
 // Helper function to send JSON error responses

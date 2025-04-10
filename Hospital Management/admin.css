@@ -989,4 +989,345 @@ select option:disabled {
     border-color: #4dabf7;
     outline: none;
     box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.25);
+}
+
+/* Enhanced Bed Assignment Modal Styles */
+#bedAssignmentModal .modal-content {
+    border-radius: 16px;
+    max-width: 600px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    animation: modalFadeIn 0.3s ease;
+    border: none;
+    overflow: hidden;
+}
+
+#bedAssignmentModal .modal-header {
+    background-color: var(--primary-blue);
+    color: white;
+    padding: 20px 24px;
+    border-bottom: none;
+}
+
+#bedAssignmentModal .modal-header h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+}
+
+#bedAssignmentModal .modal-header .close {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 28px;
+    transition: all 0.2s;
+}
+
+#bedAssignmentModal .modal-header .close:hover {
+    color: #fff;
+    transform: scale(1.1);
+}
+
+#bedAssignmentModal .modal-body {
+    padding: 24px;
+    background-color: #f9fafb;
+}
+
+#bedAssignmentModal .form-group {
+    margin-bottom: 20px;
+    background-color: #fff;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+#bedAssignmentModal .form-group:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-left-color: var(--primary-blue);
+    transform: translateY(-2px);
+}
+
+#bedAssignmentModal .form-group label {
+    font-weight: 600;
+    font-size: 15px;
+    color: #333;
+    margin-bottom: 10px;
+    display: block;
+    letter-spacing: 0.3px;
+}
+
+#bedAssignmentModal .form-group label.required::after {
+    content: "*";
+    color: var(--medical-red);
+    margin-left: 4px;
+    font-size: 16px;
+}
+
+#bedAssignmentModal select,
+#bedAssignmentModal input[type="date"],
+#bedAssignmentModal textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    background-color: #f8fafc;
+}
+
+#bedAssignmentModal select:hover,
+#bedAssignmentModal input[type="date"]:hover,
+#bedAssignmentModal textarea:hover {
+    border-color: #cbd5e1;
+}
+
+#bedAssignmentModal select:focus,
+#bedAssignmentModal input[type="date"]:focus,
+#bedAssignmentModal textarea:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 136, 255, 0.15);
+    outline: none;
+    background-color: #fff;
+}
+
+#bedAssignmentModal textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+#bedAssignmentModal .select-with-action {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+#bedAssignmentModal .add-new-btn {
+    background-color: var(--success-green);
+    color: white;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+#bedAssignmentModal .add-new-btn:hover {
+    background-color: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+#bedAssignmentModal .add-new-btn:active {
+    transform: translateY(0);
+}
+
+#bedAssignmentModal .form-help {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 8px;
+    display: block;
+}
+
+#bedAssignmentModal .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+#bedAssignmentModal .form-actions button {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+#bedAssignmentModal .form-actions button[type="button"] {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+#bedAssignmentModal .form-actions button[type="button"]:hover {
+    background-color: #e2e8f0;
+    color: #334155;
+}
+
+#bedAssignmentModal .form-actions button[type="submit"] {
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 136, 255, 0.3);
+}
+
+#bedAssignmentModal .form-actions button[type="submit"]:hover {
+    background-color: #0077e6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 136, 255, 0.4);
+}
+
+#bedAssignmentModal .form-actions button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+#bedAssignmentModal #patientSelectArea,
+#bedAssignmentModal #bedSelectionArea {
+    position: relative;
+}
+
+.error-message {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    border-left: 4px solid #ef4444;
+}
+
+.error-message:before {
+    content: "⚠️";
+    font-size: 16px;
+}
+
+/* Animation for modal */
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments for bed assignment form */
+@media (max-width: 768px) {
+    #bedAssignmentModal .modal-content {
+        max-width: 95%;
+        margin: 50px auto;
+    }
+    
+    #bedAssignmentModal .select-with-action {
+        flex-direction: column;
+    }
+    
+    #bedAssignmentModal .add-new-btn {
+        margin-top: 8px;
+    }
+    
+    #bedAssignmentModal .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    #bedAssignmentModal .form-actions button {
+        width: 100%;
+    }
+}
+
+/* Cancel/Clear button styling to match admin dashboard */
+.cancel-btn {
+    background-color: #f8f9fa;
+    color: #dc2626;
+    border: 1px solid #fee2e2;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
+}
+
+.cancel-btn:hover {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(220, 38, 38, 0.15);
+}
+
+.cancel-btn:active {
+    transform: translateY(0);
+}
+
+.cancel-btn i {
+    font-size: 0.9rem;
+}
+
+/* Country code dropdown styling */
+.phone-input-container {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+}
+
+#country-code {
+    flex-basis: 35%;
+    max-width: 140px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    background-color: #f8fafc;
+    color: #333;
+    font-weight: 500;
+}
+
+#country-code:hover {
+    border-color: #cbd5e1;
+}
+
+#country-code:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 136, 255, 0.15);
+    outline: none;
+    background-color: #fff;
+}
+
+#country-code option {
+    padding: 8px;
+    font-size: 14px;
+}
+
+/* Styling for form with country code */
+#bedAssignmentModal .phone-input-container input[type="tel"] {
+    flex-grow: 1;
+}
+
+/* Override for matching design in the modal context */
+.modal .form-group .phone-input-container select,
+.modal .form-group .phone-input-container input {
+    margin: 0;
+}
+
+/* Responsive adjustments for phone inputs */
+@media (max-width: 480px) {
+    .phone-input-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    #country-code {
+        max-width: 100%;
+        width: 100%;
+    }
 } 
