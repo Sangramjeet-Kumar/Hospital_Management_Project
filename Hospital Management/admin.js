@@ -71,6 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up new patient modal events
     setupNewPatientModal();
     
+    // Set up new doctor modal events
+    setupDoctorModal();
+    
     // Explicitly load bed assignments on initial page load
     loadBedAssignments();
     
@@ -1241,50 +1244,209 @@ async function loadDoctors() {
         if (!response.ok) {
             throw new Error(`Failed to fetch doctors: ${response.status}`);
         }
-        
         const doctors = await response.json();
         displayDoctors(doctors);
     } catch (error) {
         console.error('Error loading doctors:', error);
         const tbody = document.getElementById('doctorsTableBody');
-        tbody.innerHTML = `<tr><td colspan="6" class="error-message"><i class="fas fa-exclamation-circle"></i> ${error.message}</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="6" class="error-data"><i class="fas fa-exclamation-circle"></i> Error loading doctors data</td></tr>';
     }
 }
 
-// Display patients in table
-function displayPatients(patients) {
-    const tbody = document.getElementById('patientsTableBody');
-    tbody.innerHTML = '';
-
-    if (!patients || patients.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="no-data"><i class="fas fa-info-circle"></i> No patients found</td></tr>';
+// Function to open the new doctor modal
+function openNewDoctorModal() {
+    console.log('Opening new doctor modal - function triggered');
+    const modal = document.getElementById('new-doctor-modal');
+    
+    if (!modal) {
+        console.error('Error: New doctor modal element not found in the DOM!');
+        alert('Could not open the new doctor modal. Please refresh the page and try again.');
         return;
     }
+    
+    console.log('Setting modal display to block');
+    modal.style.display = 'block';
+    
+    // Reset the form
+    const form = document.getElementById('new-doctor-form');
+    if (form) {
+        console.log('Resetting doctor form');
+        form.reset();
+    } else {
+        console.error('Error: Doctor form element not found!');
+    }
+    
+    // Clear any previous error messages
+    const errorMsg = document.getElementById('doctorErrorMessage');
+    if (errorMsg) {
+        errorMsg.style.display = 'none';
+        errorMsg.textContent = '';
+    }
+    
+    console.log('Doctor modal successfully opened');
+}
 
-    patients.forEach(patient => {
-        const row = document.createElement('tr');
-        // Handle null last_visit values
-        const lastVisitDisplay = patient.last_visit && patient.last_visit !== 'null' ? 
-            formatDate(patient.last_visit) : 'N/A';
-            
-        row.innerHTML = `
-            <td>#${patient.patient_id}</td>
-            <td>${patient.full_name}</td>
-            <td>${patient.contact_number}</td>
-            <td>${patient.email}</td>
-            <td>${patient.gender}</td>
-            <td>${lastVisitDisplay}</td>
-            <td>
-                <button class="action-btn view-btn" title="View details">
-                    <i class="fas fa-eye"></i>
-                </button>
-                <button class="action-btn edit-btn" title="Edit patient">
-                    <i class="fas fa-edit"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
+// Function to close the new doctor modal
+function closeNewDoctorModal() {
+    console.log('Closing new doctor modal');
+    const modal = document.getElementById('new-doctor-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    } else {
+        console.error('New doctor modal element not found when trying to close');
+    }
+}
+
+// Function to handle doctor form submission
+async function handleNewDoctorSubmit(event) {
+    event.preventDefault(); // Explicitly prevent default form submission
+    console.log('Doctor form submission triggered');
+    
+    // Get form values
+    const fullName = document.getElementById('doctorName').value.trim();
+    const department = document.getElementById('doctorDepartment').value;
+    const contactNumber = document.getElementById('doctorContact').value.trim();
+    const email = document.getElementById('doctorEmail').value.trim();
+    const description = document.getElementById('doctorDescription').value.trim();
+    const username = document.getElementById('doctorUsername').value.trim();
+    
+    console.log('Form values:', { fullName, department, contactNumber, email, description, username });
+    
+    // Validate form inputs
+    if (!fullName) {
+        showDoctorError('Please enter the doctor\'s full name');
+        document.getElementById('doctorName').focus();
+        return false;
+    }
+    
+    if (!department) {
+        showDoctorError('Please select a department');
+        document.getElementById('doctorDepartment').focus();
+        return false;
+    }
+    
+    if (!contactNumber) {
+        showDoctorError('Please enter a contact number');
+        document.getElementById('doctorContact').focus();
+        return false;
+    }
+    
+    if (!email) {
+        showDoctorError('Please enter an email address');
+        document.getElementById('doctorEmail').focus();
+        return false;
+    }
+    
+    // Validate email format
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+        showDoctorError('Please enter a valid email address');
+        document.getElementById('doctorEmail').focus();
+        return false;
+    }
+    
+    // Create doctor data object
+    const doctorData = {
+        full_name: fullName,
+        department: department,
+        contact_number: contactNumber,
+        email: email,
+        description: description || '',
+        username: username || ''
+    };
+    
+    console.log('Sending doctor data to database:', JSON.stringify(doctorData));
+    
+    // Clear previous error
+    const errorMsg = document.getElementById('doctorErrorMessage');
+    if (errorMsg) {
+        errorMsg.style.display = 'none';
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('#new-doctor-form button[type="submit"]');
+    const originalButtonText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating...';
+    
+    // Display a spinner or loading message in the modal
+    const modalBody = document.querySelector('#new-doctor-modal .modal-body');
+    const loadingEl = document.createElement('div');
+    loadingEl.className = 'loading-overlay';
+    loadingEl.innerHTML = '<div class="spinner"></div><p>Creating doctor...</p>';
+    loadingEl.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10;';
+    modalBody.appendChild(loadingEl);
+    
+    try {
+        // Send API request to create doctor in the database
+        const response = await fetch('http://localhost:8080/api/doctors', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(doctorData)
+        });
+        
+        console.log('Database response status:', response.status);
+        
+        // Handle different response statuses
+        if (response.status === 409) {
+            throw new Error('A doctor with this email already exists');
+        }
+        
+        if (response.status === 400) {
+            const data = await response.json();
+            throw new Error(data.message || 'Validation failed');
+        }
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        // Parse response data
+        const data = await response.json();
+        console.log('New doctor created in database:', data);
+        
+        // Close the modal
+        closeNewDoctorModal();
+        
+        // Show success message
+        alert(`Doctor ${data.full_name} successfully added!`);
+        
+        // Refresh the doctors list
+        await loadDoctors();
+        
+        // Update the doctor count in the dashboard
+        fetchAdminStats();
+        
+    } catch (error) {
+        console.error('Error creating doctor:', error);
+        showDoctorError(`Failed to create doctor: ${error.message}`);
+    } finally {
+        // Restore the button
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalButtonText;
+        
+        // Remove loading overlay if still present
+        if (loadingEl.parentNode) {
+            loadingEl.parentNode.removeChild(loadingEl);
+        }
+    }
+    
+    // Return false to prevent default form submission
+    return false;
+}
+
+// Function to show doctor error message
+function showDoctorError(message) {
+    const errorMsg = document.getElementById('doctorErrorMessage');
+    if (errorMsg) {
+        errorMsg.textContent = message;
+        errorMsg.style.display = 'block';
+    } else {
+        console.error('Error message element not found:', message);
+        alert(message); // Fallback to alert if element not found
+    }
 }
 
 // Display doctors in table
@@ -1437,56 +1599,15 @@ function getActivityIcon(type) {
 
 // Display appointments function
 function displayAppointments(appointments) {
+    // Use the new displayAppointmentsTable function
+    displayAppointmentsTable(appointments);
+    
+    // Keep this part for backward compatibility
     const container = document.querySelector('#appointments .table-container');
     
     if (!appointments || appointments.length === 0) {
-        container.innerHTML = '<div class="no-data"><i class="fas fa-calendar-times"></i> No appointments found</div>';
-        return;
+        console.log('No appointments to display in the old container');
     }
-
-    const table = document.createElement('table');
-    table.className = 'data-table';
-    
-    table.innerHTML = `
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Patient</th>
-                <th>Doctor</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${appointments.map(apt => `
-                <tr>
-                    <td>#${apt.appointment_id}</td>
-                    <td>${apt.patient_name}</td>
-                    <td>${apt.doctor_name.startsWith('Dr.') ? apt.doctor_name : 'Dr. ' + apt.doctor_name}</td>
-                    <td>${formatDate(apt.appointment_date)}</td>
-                    <td>${apt.appointment_time}</td>
-                    <td>
-                        <span class="status-badge status-${apt.status?.toLowerCase() || 'scheduled'}">
-                            ${apt.status || 'Scheduled'}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="action-btn view-btn" title="View details">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="action-btn edit-btn" title="Edit status">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('')}
-        </tbody>
-    `;
-    
-    container.innerHTML = '';
-    container.appendChild(table);
 }
 
 // Add global event listeners
@@ -2534,5 +2655,347 @@ async function syncBedsCount() {
     } catch (error) {
         console.error('Error syncing BedsCount table:', error);
         return { success: false, error: error.message };
+    }
+}
+
+// Load appointments data from API
+async function loadAppointments(range = 'all') {
+    try {
+        console.log(`Loading appointments data from database for range: ${range}...`);
+        const tbody = document.getElementById('appointmentsTableBody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8" class="loading-data"><i class="fas fa-spinner fa-spin"></i> Loading appointments...</td></tr>';
+        }
+        
+        // Fetch appointments from the server using the correct API endpoint
+        const response = await fetch(`http://localhost:8080/api/appointments/list?range=${range}`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to fetch appointments: ${response.status} ${response.statusText}`);
+        }
+        
+        const appointments = await response.json();
+        console.log(`Successfully loaded ${appointments.length} appointments from database`);
+        
+        // Store the data globally for reuse
+        window.appointmentsData = appointments;
+        
+        // Display the appointments in the table
+        if (tbody) {
+            displayAppointmentsTable(window.appointmentsData);
+        }
+        
+        return window.appointmentsData;
+    } catch (error) {
+        console.error('Error in loadAppointments:', error);
+        const tbody = document.getElementById('appointmentsTableBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="8" class="error-message"><i class="fas fa-exclamation-circle"></i> ${error.message}</td></tr>`;
+        }
+        return [];
+    }
+}
+
+// Function to display appointments in the table
+function displayAppointmentsTable(appointments) {
+    const tbody = document.getElementById('appointmentsTableBody');
+    if (!tbody) return;
+    
+    // Clear the table
+    tbody.innerHTML = '';
+    
+    if (!appointments || appointments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data"><i class="fas fa-calendar-times"></i> No appointments found</td></tr>';
+        return;
+    }
+    
+    // Sort appointments by date and time
+    appointments.sort((a, b) => {
+        const dateA = new Date(a.appointment_date + 'T' + (a.appointment_time || '00:00'));
+        const dateB = new Date(b.appointment_date + 'T' + (b.appointment_time || '00:00'));
+        return dateA - dateB;
+    });
+    
+    // Add each appointment to the table
+    appointments.forEach(apt => {
+        const row = document.createElement('tr');
+        
+        // Determine the status class
+        const statusClass = apt.status ? apt.status.toLowerCase() : 'scheduled';
+        
+        // Format the date
+        const aptDate = new Date(apt.appointment_date);
+        const formattedDate = aptDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        
+        // Format time (if available)
+        const timeDisplay = apt.appointment_time || 'N/A';
+        
+        // Ensure doctor name has title
+        const doctorName = apt.doctor_name ? 
+            (apt.doctor_name.startsWith('Dr.') ? apt.doctor_name : `Dr. ${apt.doctor_name}`) : 
+            'Not assigned';
+        
+        // Create row content
+        row.innerHTML = `
+            <td>#${apt.appointment_id || 'N/A'}</td>
+            <td>${apt.patient_name || 'Unknown'}</td>
+            <td>${doctorName}</td>
+            <td>${apt.department || 'General'}</td>
+            <td>${formattedDate}</td>
+            <td>${timeDisplay}</td>
+            <td>
+                <span class="status-badge status-${statusClass}">
+                    ${apt.status || 'Scheduled'}
+                </span>
+            </td>
+            <td>
+                <button class="action-btn view-btn" title="View details" onclick="viewAppointmentDetails(${apt.appointment_id})">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" title="Update status" onclick="updateAppointmentStatus(${apt.appointment_id})">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+// Function to refresh appointments data
+function refreshAppointmentsData() {
+    console.log('Refreshing appointments data...');
+    
+    // Get the current date range selection
+    const dateRange = document.getElementById('dateRange');
+    const range = dateRange ? dateRange.value : 'all';
+    
+    // Show loading indicator
+    const tbody = document.getElementById('appointmentsTableBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" class="loading-data"><i class="fas fa-spinner fa-spin"></i> Loading appointments...</td></tr>';
+    }
+    
+    // Fetch fresh data from the server
+    loadAppointments(range).then(() => {
+        console.log('Appointments data refreshed');
+    }).catch(error => {
+        console.error('Error refreshing appointments data:', error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="8" class="error-message"><i class="fas fa-exclamation-circle"></i> ${error.message}</td></tr>`;
+        }
+    });
+}
+
+// Function to create a new appointment
+function createNewAppointment() {
+    // Redirect to the appointment creation page
+    window.location.href = 'appointment.html';
+}
+
+// Placeholder functions for appointment actions
+function viewAppointmentDetails(appointmentId) {
+    console.log(`View details for appointment ${appointmentId}`);
+    alert(`Viewing details for appointment #${appointmentId}`);
+    // Implement view functionality
+}
+
+function updateAppointmentStatus(appointmentId) {
+    console.log(`Update status for appointment ${appointmentId}`);
+    
+    // Find the appointment in the data
+    const appointment = window.appointmentsData.find(apt => apt.appointment_id === appointmentId);
+    if (!appointment) {
+        alert('Appointment not found');
+        return;
+    }
+    
+    // Simple status update logic - could be replaced with a modal
+    const newStatus = prompt(
+        `Current status: ${appointment.status || 'Scheduled'}\nEnter new status (Scheduled, Completed, Cancelled):`, 
+        appointment.status || 'Scheduled'
+    );
+    
+    if (!newStatus) return; // User cancelled
+    
+    // Update the status via API
+    fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(response => {
+        if (!response.ok) throw new Error(`Failed to update status: ${response.status}`);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Status updated successfully:', data);
+        // Refresh the appointments list
+        refreshAppointmentsData();
+    })
+    .catch(error => {
+        console.error('Error updating appointment status:', error);
+        alert(`Failed to update status: ${error.message}`);
+    });
+}
+
+// Function to show doctor error message
+function showDoctorError(message) {
+    const errorMsg = document.getElementById('doctorErrorMessage');
+    if (errorMsg) {
+        errorMsg.textContent = message;
+        errorMsg.style.display = 'block';
+    } else {
+        console.error('Error message element not found:', message);
+        alert(message); // Fallback to alert if element not found
+    }
+}
+
+// Display patients in table
+function displayPatients(patients) {
+    const tbody = document.getElementById('patientsTableBody');
+    tbody.innerHTML = '';
+
+    if (!patients || patients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="no-data"><i class="fas fa-info-circle"></i> No patients found</td></tr>';
+        return;
+    }
+    
+    patients.forEach(patient => {
+        const row = document.createElement('tr');
+        // Handle null last_visit values
+        const lastVisitDisplay = patient.last_visit && patient.last_visit !== 'null' ? 
+            formatDate(patient.last_visit) : 'N/A';
+            
+        row.innerHTML = `
+            <td>#${patient.patient_id}</td>
+            <td>${patient.full_name}</td>
+            <td>${patient.contact_number}</td>
+            <td>${patient.email}</td>
+            <td>${patient.gender}</td>
+            <td>${lastVisitDisplay}</td>
+            <td>
+                <button class="action-btn view-btn" title="View details">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" title="Edit patient">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Function to set up the doctor modal
+function setupDoctorModal() {
+    console.log('Setting up doctor modal event listeners');
+    
+    // Add event listener to the "Add New Doctor" button
+    const addDoctorBtn = document.querySelector('#doctors .add-btn');
+    if (addDoctorBtn) {
+        console.log('Add New Doctor button found - adding click event listener');
+        // Remove any existing event listeners to prevent duplicates
+        const newBtn = addDoctorBtn.cloneNode(true);
+        addDoctorBtn.parentNode.replaceChild(newBtn, addDoctorBtn);
+        newBtn.addEventListener('click', function() {
+            console.log('Add New Doctor button clicked - event handler executed');
+            openNewDoctorModal();
+        });
+    } else {
+        console.error('Add New Doctor button not found in the DOM!');
+    }
+    
+    // Set up the form submission - remove and recreate to avoid duplicate listeners
+    const doctorForm = document.getElementById('new-doctor-form');
+    if (doctorForm) {
+        console.log('Doctor form found - setting up submit handler');
+        // Clone the form to remove any existing event listeners
+        const newForm = doctorForm.cloneNode(true);
+        if (doctorForm.parentNode) {
+            doctorForm.parentNode.replaceChild(newForm, doctorForm);
+        }
+        
+        // Add new event listener
+        newForm.addEventListener('submit', function(event) {
+            console.log('Doctor form submission event captured by addEventListener');
+            // The onsubmit attribute should handle this, but we'll add this as a backup
+            event.preventDefault();
+            handleNewDoctorSubmit(event);
+            return false;
+        });
+        
+        console.log('Doctor form submit handler set up successfully');
+    } else {
+        console.error('Doctor form not found in the DOM!');
+    }
+    
+    // Set up close button
+    const closeBtn = document.querySelector('#new-doctor-modal .close');
+    if (closeBtn) {
+        console.log('Doctor modal close button found - adding click event listener');
+        const newCloseBtn = closeBtn.cloneNode(true);
+        if (closeBtn.parentNode) {
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        }
+        newCloseBtn.addEventListener('click', closeNewDoctorModal);
+    } else {
+        console.error('Doctor modal close button not found in the DOM!');
+    }
+    
+    // Also set up the cancel button
+    const cancelBtn = document.getElementById('cancel-doctor-btn');
+    if (cancelBtn) {
+        console.log('Doctor modal cancel button found - adding click event listener');
+        const newCancelBtn = cancelBtn.cloneNode(true);
+        if (cancelBtn.parentNode) {
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        }
+        newCancelBtn.addEventListener('click', closeNewDoctorModal);
+    } else {
+        console.error('Doctor modal cancel button not found in the DOM!');
+    }
+    
+    console.log('Doctor modal setup complete');
+}
+
+// Function to load data for specific tabs
+async function loadTabData(tabId) {
+    console.log(`Loading data for tab: ${tabId}`);
+    
+    switch (tabId) {
+        case 'dashboard':
+            fetchAdminStats();
+            fetchRecentActivity();
+            fetchFilteredAppointments('week');
+            break;
+            
+        case 'appointments':
+            fetchFilteredAppointments('week');
+            break;
+            
+        case 'patients':
+            await loadPatients();
+            break;
+            
+        case 'doctors':
+            await loadDoctors();
+            // Set up the doctor modal when the doctors tab is active
+            setupDoctorModal();
+            break;
+            
+        case 'departments':
+            loadDepartments();
+            break;
+            
+        case 'beds':
+            await loadBedSection();
+            break;
     }
 }

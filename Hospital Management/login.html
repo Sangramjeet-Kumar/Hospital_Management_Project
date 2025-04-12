@@ -7,6 +7,36 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="login.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .direct-login {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .direct-login button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+        }
+        .direct-login .admin-login {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .direct-login .doctor-login {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+        .direct-login .staff-login {
+            background-color: #fff3e0;
+            color: #e65100;
+        }
+    </style>
 </head>
 <body>
     <a href="index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
@@ -38,11 +68,11 @@
 
                     <div class="input-group">
                         <i class="fas fa-id-card"></i>
-                        <input type="text" placeholder="Employee ID" required>
+                        <input type="text" name="employeeId" placeholder="Employee ID" required>
                     </div>
                     <div class="input-group">
                         <i class="fas fa-lock"></i>
-                        <input type="password" placeholder="Password" required>
+                        <input type="password" name="password" placeholder="Password" required>
                         <i class="fas fa-eye-slash toggle-password"></i>
                     </div>
                     
@@ -57,14 +87,77 @@
                     <button type="submit" class="submit-btn">Sign In</button>
                 </form>
 
+                <div class="direct-login">
+                    <h3>Quick Test Login:</h3>
+                    <button class="admin-login" onclick="directLogin('admin', 1001, 'admin123')">
+                        <i class="fas fa-user-shield"></i> Login as Admin
+                    </button>
+                    <button class="doctor-login" onclick="directLogin('doctor', 2001, 'doctor123')">
+                        <i class="fas fa-user-md"></i> Login as Doctor
+                    </button>
+                    <button class="staff-login" onclick="directLogin('staff', 3001, 'staff123')">
+                        <i class="fas fa-user-nurse"></i> Login as Staff
+                    </button>
+                </div>
+
                 <div class="help-section">
                     <p>Need help? Contact IT Support</p>
                     <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
                     <p><i class="fas fa-envelope"></i> support@pulsepoint.com</p>
                 </div>
+                
+                <div class="test-accounts" style="margin-top: 20px; font-size: 14px; border-top: 1px solid #eee; padding-top: 15px;">
+                    <p><strong>Test Accounts:</strong></p>
+                    <p>Admin: ID: 1001, Password: admin123</p>
+                    <p>Doctor: ID: 2001, Password: doctor123</p>
+                    <p>Staff: ID: 3001, Password: staff123</p>
+                </div>
             </div>
         </div>
     </div>
+    <script>
+        // Direct login function
+        async function directLogin(role, employeeId, password) {
+            try {
+                console.log(`Direct login attempt as ${role}`);
+                const response = await fetch('http://localhost:8080/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        employeeId: String(employeeId),
+                        password: password,
+                        role: role
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Login successful:', data);
+                    localStorage.setItem('userData', JSON.stringify(data));
+                    
+                    // Define redirects
+                    const redirects = {
+                        'admin': 'admin.html',
+                        'doctor': 'doctor_dashboard.html',
+                        'staff': 'staff_dashboard.html'
+                    };
+                    
+                    // Redirect to the appropriate page
+                    window.location.href = redirects[role];
+                } else {
+                    const error = await response.text();
+                    console.error('Login failed:', error);
+                    alert(`Login failed: ${error}`);
+                }
+            } catch (error) {
+                console.error('Error during direct login:', error);
+                alert('Login failed: ' + error.message);
+            }
+        }
+    </script>
     <script src="login.js"></script>
+    <script src="login_check.js"></script>
 </body>
 </html> 

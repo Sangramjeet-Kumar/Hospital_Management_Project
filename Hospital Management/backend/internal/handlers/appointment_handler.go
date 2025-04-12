@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"hospital-management/backend/internal/database"
 	"hospital-management/backend/internal/models"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -211,6 +211,98 @@ func GetDoctors(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// CreateDoctor handles the creation of a new doctor
+func CreateDoctor(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight request
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Check if method is POST
+	if r.Method != "POST" {
+		sendJSONError(w, "Method not allowed. Use POST.", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Decode request body
+	var doctor models.Doctor
+	err := json.NewDecoder(r.Body).Decode(&doctor)
+	if err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		sendJSONError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if doctor.FullName == "" || doctor.Department == "" || doctor.Email == "" || doctor.ContactNumber == "" {
+		sendJSONError(w, "Missing required fields: name, department, email, and contact number are required", http.StatusBadRequest)
+		return
+	}
+
+	// Format the full name to ensure it starts with "Dr." if it doesn't already
+	if !strings.HasPrefix(doctor.FullName, "Dr.") {
+		doctor.FullName = "Dr. " + doctor.FullName
+	}
+
+	// Generate username if not provided
+	if doctor.Username == "" {
+		// Create a username based on name - lowercase first name + first letter of last name
+		nameParts := strings.Split(strings.TrimPrefix(doctor.FullName, "Dr. "), " ")
+		if len(nameParts) > 1 {
+			doctor.Username = strings.ToLower(nameParts[0] + nameParts[len(nameParts)-1][:1])
+		} else {
+			doctor.Username = strings.ToLower(nameParts[0])
+		}
+	}
+
+	// Insert doctor into database
+	query := `INSERT INTO Doctors (FullName, Description, ContactNumber, Email, Department, Username)
+			  VALUES (?, ?, ?, ?, ?, ?)`
+
+	result, err := database.DB.Exec(query,
+		doctor.FullName,
+		doctor.Description,
+		doctor.ContactNumber,
+		doctor.Email,
+		doctor.Department,
+		doctor.Username)
+
+	if err != nil {
+		// Check for duplicate email
+		if strings.Contains(err.Error(), "Duplicate entry") && strings.Contains(err.Error(), "email") {
+			log.Printf("Error inserting doctor: %v", err)
+			sendJSONError(w, "A doctor with this email already exists", http.StatusConflict)
+			return
+		}
+
+		log.Printf("Database error: %v", err)
+		sendJSONError(w, "Failed to create doctor", http.StatusInternalServerError)
+		return
+	}
+
+	// Get the inserted ID
+	doctorID, err := result.LastInsertId()
+	if err != nil {
+		log.Printf("Error getting last insert ID: %v", err)
+		sendJSONError(w, "Doctor created but failed to get ID", http.StatusInternalServerError)
+		return
+	}
+
+	// Set the doctor ID in the response
+	doctor.DoctorID = int(doctorID)
+
+	// Return success response
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(doctor)
+}
+
 // Add a new function to get appointments
 func GetAppointments(w http.ResponseWriter, r *http.Request) {
 	query := `
@@ -409,97 +501,4 @@ func UpdateAppointmentStatus(w http.ResponseWriter, r *http.Request) {
 		"status":  "success",
 		"message": "Appointment status updated successfully",
 	})
-}
-
-// GetDoctorAppointments handles requests for a specific doctor's appointments
-func GetDoctorAppointments(w http.ResponseWriter, r *http.Request) {
-	// Set CORS headers
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	// Handle preflight request
-	if r.Method == "OPTIONS" {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	// Get doctor ID from URL parameters
-	vars := mux.Vars(r)
-	doctorID := vars["doctorID"]
-	if doctorID == "" {
-		sendJSONError(w, "Doctor ID is required", http.StatusBadRequest)
-		return
-	}
-
-	// Get status filter from query parameters
-	status := r.URL.Query().Get("status")
-	var statusFilter string
-	if status != "" && status != "all" {
-		statusFilter = "AND a.Status = ?"
-	}
-
-	query := fmt.Sprintf(`
-        SELECT 
-            a.AppointmentID,
-            d.FullName as DoctorName,
-            p.FullName as PatientName,
-            a.AppointmentDate,
-            a.AppointmentTime,
-            a.Status,
-            a.Description
-        FROM Appointment a
-        JOIN Doctors d ON a.DoctorID = d.DoctorID
-        JOIN Patients p ON a.PatientID = p.PatientID
-        WHERE a.DoctorID = ? %s
-        ORDER BY a.AppointmentDate DESC, a.AppointmentTime DESC`, statusFilter)
-
-	var rows *sql.Rows
-	var err error
-
-	if statusFilter != "" {
-		rows, err = database.DB.Query(query, doctorID, status)
-	} else {
-		rows, err = database.DB.Query(query, doctorID)
-	}
-
-	if err != nil {
-		log.Printf("Database error: %v", err)
-		sendJSONError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
-
-	var appointments []AppointmentResponse
-	for rows.Next() {
-		var apt AppointmentResponse
-		err := rows.Scan(
-			&apt.AppointmentID,
-			&apt.DoctorName,
-			&apt.PatientName,
-			&apt.AppointmentDate,
-			&apt.AppointmentTime,
-			&apt.Status,
-			&apt.Description,
-		)
-		if err != nil {
-			log.Printf("Row scan error: %v", err)
-			sendJSONError(w, "Data parsing error", http.StatusInternalServerError)
-			return
-		}
-		appointments = append(appointments, apt)
-	}
-
-	if err = rows.Err(); err != nil {
-		log.Printf("Rows error: %v", err)
-		sendJSONError(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(appointments); err != nil {
-		log.Printf("JSON encoding error: %v", err)
-		sendJSONError(w, "JSON encoding error", http.StatusInternalServerError)
-		return
-	}
 }

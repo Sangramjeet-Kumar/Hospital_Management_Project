@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #0066cc;
+        }
+        .endpoint-container {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 100px;
+            font-family: monospace;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0055bb;
+        }
+        .response {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 150px;
+            overflow: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .response-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .status {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        .status-error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Test Client</h1>
+        
+        <!-- Test Endpoint -->
+        <div class="endpoint-container">
+            <h2>Test API</h2>
+            <div class="input-group">
+                <label>URL:</label>
+                <input type="text" id="testUrl" value="http://localhost:8080/api/test">
+            </div>
+            <div class="input-group">
+                <label>Request Body:</label>
+                <textarea id="testBody">{
+  "message": "Hello Server",
+  "number": 42
+}</textarea>
+            </div>
+            <button onclick="testAPI()">Send Request</button>
+            <div class="response-label">
+                <label>Response:</label>
+                <span id="testStatus" class="status"></span>
+            </div>
+            <div id="testResponse" class="response"></div>
+        </div>
+        
+        <!-- Login Endpoint -->
+        <div class="endpoint-container">
+            <h2>Login API</h2>
+            <div class="input-group">
+                <label>URL:</label>
+                <input type="text" id="loginUrl" value="http://localhost:8080/api/auth/login">
+            </div>
+            <div class="input-group">
+                <label>Role:</label>
+                <select id="loginRole">
+                    <option value="admin">Admin</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="staff">Staff</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Employee ID:</label>
+                <input type="text" id="loginEmployeeId" value="1001">
+            </div>
+            <div class="input-group">
+                <label>Password:</label>
+                <input type="password" id="loginPassword" value="admin123">
+            </div>
+            <button onclick="testLogin()">Send Login Request</button>
+            <div class="response-label">
+                <label>Response:</label>
+                <span id="loginStatus" class="status"></span>
+            </div>
+            <div id="loginResponse" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        // Test API function
+        async function testAPI() {
+            const url = document.getElementById('testUrl').value;
+            const body = document.getElementById('testBody').value;
+            const responseElement = document.getElementById('testResponse');
+            const statusElement = document.getElementById('testStatus');
+            
+            try {
+                // Clear previous response
+                responseElement.textContent = 'Sending request...';
+                statusElement.textContent = '';
+                statusElement.className = 'status';
+                
+                // Make the request
+                console.log('Sending request to:', url);
+                console.log('Request body:', body);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: body
+                });
+                
+                // Get the response text
+                const responseText = await response.text();
+                
+                // Update the status
+                statusElement.textContent = response.status + ' ' + response.statusText;
+                statusElement.className = 'status ' + (response.ok ? 'status-success' : 'status-error');
+                
+                // Try to format as JSON
+                try {
+                    const jsonResponse = JSON.parse(responseText);
+                    responseElement.textContent = JSON.stringify(jsonResponse, null, 2);
+                } catch (e) {
+                    responseElement.textContent = responseText;
+                }
+                
+                console.log('Response:', responseText);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                responseElement.textContent = 'Error: ' + error.message;
+                statusElement.textContent = 'Error';
+                statusElement.className = 'status status-error';
+            }
+        }
+        
+        // Test Login function
+        async function testLogin() {
+            const url = document.getElementById('loginUrl').value;
+            const role = document.getElementById('loginRole').value;
+            const employeeId = document.getElementById('loginEmployeeId').value;
+            const password = document.getElementById('loginPassword').value;
+            const responseElement = document.getElementById('loginResponse');
+            const statusElement = document.getElementById('loginStatus');
+            
+            // Prepare request body
+            const requestBody = JSON.stringify({
+                role: role,
+                employeeId: employeeId,
+                password: password
+            });
+            
+            try {
+                // Clear previous response
+                responseElement.textContent = 'Sending request...';
+                statusElement.textContent = '';
+                statusElement.className = 'status';
+                
+                // Make the request
+                console.log('Sending login request to:', url);
+                console.log('Request body:', requestBody);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: requestBody
+                });
+                
+                // Get the response text
+                const responseText = await response.text();
+                
+                // Update the status
+                statusElement.textContent = response.status + ' ' + response.statusText;
+                statusElement.className = 'status ' + (response.ok ? 'status-success' : 'status-error');
+                
+                // Try to format as JSON
+                try {
+                    const jsonResponse = JSON.parse(responseText);
+                    responseElement.textContent = JSON.stringify(jsonResponse, null, 2);
+                    
+                    if (response.ok && jsonResponse.success) {
+                        // Store in localStorage for testing
+                        localStorage.setItem('userData', JSON.stringify(jsonResponse));
+                    }
+                } catch (e) {
+                    responseElement.textContent = responseText;
+                }
+                
+                console.log('Response:', responseText);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                responseElement.textContent = 'Error: ' + error.message;
+                statusElement.textContent = 'Error';
+                statusElement.className = 'status status-error';
+            }
+        }
+    </script>
+</body>
+</html> 
