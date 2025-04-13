@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments - PulsePoint</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="appointments.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- <a href="index.html">Home</a> -->
+    <!-- <a href="appointment.html">Book an Appointment now</a> -->
+    <nav class="glass-nav">
+        <a href="index.html" class="logo"><span class="plus-sign">+</span>PulsePoint</a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="appointment.html" class="active">Book an Appointment now</a></li>
+        </ul>
+    </nav>
+
+    <main class="appointments-page">
+        <div class="appointments-container">
+            <h1>Appointments Overview</h1>
+            
+            <div class="filters-section">
+                <div class="date-filter">
+                    <label for="dateRange">View Appointments:</label>
+                    <select id="dateRange" class="date-select">
+                        <option value="past">Past Appointments</option>
+                        <option value="today">Today's Appointments</option>
+                        <option value="week" selected>Next 7 Days</option>
+                        <option value="month">Next 30 Days</option>
+                        <option value="all">All Appointments</option>
+                    </select>
+                </div>
+                
+                <div class="search-filter">
+                    <input type="text" id="searchInput" placeholder="Search by name or ID...">
+                    <i class="fas fa-search"></i>
+                </div>
+            </div>
+
+            <div class="appointments-stats">
+                <div class="stat-card">
+                    <i class="fas fa-calendar-check"></i>
+                    <h3 id="totalAppointments">0</h3>
+                    <p>Total Appointments</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <h3 id="upcomingAppointments">0</h3>
+                    <p>Upcoming</p>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-check-circle"></i>
+                    <h3 id="completedAppointments">0</h3>
+                    <p>Completed</p>
+                </div>
+            </div>
+
+            <div class="appointments-table-container">
+                <table class="appointments-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Patient Name</th>
+                            <th>Doctor</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="appointmentsTableBody">
+                        <!-- Appointments will be loaded here -->
+                    </tbody>
+                </table>
+                <div id="loadingIndicator" class="loading-indicator">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Loading appointments...
+                </div>
+                <div id="noAppointments" class="no-appointments" style="display: none;">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>No appointments found for the selected period</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="appointments.js"></script>
+</body>
+</html> 
