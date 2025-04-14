@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Assign Bed from Appointment</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px 0;
+            width: 100%;
+        }
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        pre {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .col {
+            flex: 1;
+            min-width: 200px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        #bedDisplay {
+            margin-top: 20px;
+        }
+        .bed-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: white;
+        }
+        .bed-card.available {
+            border-left: 5px solid green;
+        }
+        .bed-card.occupied {
+            border-left: 5px solid red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Assign Bed from Completed Appointment</h1>
+    
+    <div class="container">
+        <h2>Step 1: Get Available Beds</h2>
+        <div class="row">
+            <div class="col">
+                <label for="employeeId">Employee ID:</label>
+                <input type="number" id="employeeId" value="2001">
+            </div>
+        </div>
+        <button id="getBeds">Get Available Beds</button>
+        <div id="bedDisplay"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Step 2: Assign Bed from Completed Appointment</h2>
+        <div class="row">
+            <div class="col">
+                <label for="patientId">Patient ID:</label>
+                <input type="number" id="patientId" placeholder="Enter patient ID">
+            </div>
+            <div class="col">
+                <label for="bedId">Bed ID:</label>
+                <input type="number" id="bedId" placeholder="Enter bed ID">
+            </div>
+        </div>
+        <button id="assignBed">Assign Bed from Appointment</button>
+        <h3>Response:</h3>
+        <pre id="response">No response yet</pre>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const employeeIdInput = document.getElementById('employeeId');
+            const patientIdInput = document.getElementById('patientId');
+            const bedIdInput = document.getElementById('bedId');
+            const responseElement = document.getElementById('response');
+            const bedDisplayElement = document.getElementById('bedDisplay');
+            
+            // Get available beds
+            document.getElementById('getBeds').addEventListener('click', async function() {
+                const employeeId = employeeIdInput.value;
+                
+                if (!employeeId) {
+                    alert('Please enter an Employee ID');
+                    return;
+                }
+                
+                try {
+                    bedDisplayElement.innerHTML = '<p>Loading beds...</p>';
+                    
+                    const response = await fetch(`http://localhost:8080/api/doctor/beds?employeeId=${employeeId}`);
+                    
+                    if (!response.ok) {
+                        bedDisplayElement.innerHTML = `<p class="error">Error: ${response.status} ${response.statusText}</p>`;
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Display available beds
+                    if (data.availableBeds && data.availableBeds.length > 0) {
+                        let html = '<h3>Available Beds:</h3>';
+                        
+                        data.availableBeds.forEach(bed => {
+                            html += `
+                                <div class="bed-card available">
+                                    <strong>Bed ID:</strong> ${bed.bedId}<br>
+                                    <strong>Type:</strong> ${bed.bedType}<br>
+                                    <strong>Description:</strong> ${bed.description || 'No description'}<br>
+                                    <button onclick="selectBed(${bed.bedId})">Select This Bed</button>
+                                </div>
+                            `;
+                        });
+                        
+                        bedDisplayElement.innerHTML = html;
+                    } else {
+                        bedDisplayElement.innerHTML = '<p>No available beds found.</p>';
+                    }
+                    
+                    // Also display current assignments for reference
+                    if (data.assignments && data.assignments.length > 0) {
+                        let html = '<h3>Current Bed Assignments:</h3>';
+                        
+                        data.assignments.forEach(assignment => {
+                            html += `
+                                <div class="bed-card occupied">
+                                    <strong>Patient:</strong> ${assignment.patientName} (ID: ${assignment.patientId})<br>
+                                    <strong>Bed ID:</strong> ${assignment.bedId}<br>
+                                    <strong>Type:</strong> ${assignment.bedType}<br>
+                                    <strong>Admission Date:</strong> ${assignment.admissionDate}<br>
+                                    <strong>Status:</strong> ${assignment.status}<br>
+                                </div>
+                            `;
+                        });
+                        
+                        bedDisplayElement.innerHTML += html;
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    bedDisplayElement.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                }
+            });
+            
+            // Assign bed from appointment
+            document.getElementById('assignBed').addEventListener('click', async function() {
+                const employeeId = employeeIdInput.value;
+                const patientId = patientIdInput.value;
+                const bedId = bedIdInput.value;
+                
+                if (!employeeId || !patientId || !bedId) {
+                    responseElement.textContent = 'Please fill in all required fields';
+                    responseElement.className = 'error';
+                    return;
+                }
+                
+                try {
+                    responseElement.textContent = 'Sending request...';
+                    responseElement.className = '';
+                    
+                    const response = await fetch('http://localhost:8080/api/doctor/assign-bed-from-appointment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            employeeId: parseInt(employeeId),
+                            patientId: parseInt(patientId),
+                            bedId: parseInt(bedId)
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        responseElement.textContent = JSON.stringify(data, null, 2);
+                        responseElement.className = 'success';
+                        
+                        // Refresh beds display
+                        document.getElementById('getBeds').click();
+                    } else {
+                        responseElement.textContent = JSON.stringify(data, null, 2);
+                        responseElement.className = 'error';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    responseElement.textContent = `Error: ${error.message}`;
+                    responseElement.className = 'error';
+                }
+            });
+        });
+        
+        // Function to select a bed and populate the form
+        function selectBed(bedId) {
+            document.getElementById('bedId').value = bedId;
+        }
+    </script>
+</body>
+</html> 

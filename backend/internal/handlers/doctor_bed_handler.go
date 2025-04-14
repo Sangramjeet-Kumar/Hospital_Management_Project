@@ -194,7 +194,66 @@ func GetDoctorBeds(w http.ResponseWriter, r *http.Request) {
 			"bedType":     bed.BedType,
 			"description": bed.Description,
 			"vacantBeds":  bed.VacantBeds,
+			"status":      "available",
 		})
+	}
+
+	// Check if we have any available beds
+	log.Printf("Found %d available beds", len(availableBeds))
+	if len(availableBeds) == 0 {
+		// If no available beds were found with the previous query, try a more direct approach
+		// to check if there was an issue with the join
+		directQuery := `
+		SELECT 
+			bi.BedID,
+			bi.BedType,
+			bt.Description,
+			bc.VacantBeds
+		FROM 
+			bedinventory bi
+		JOIN 
+			bedtypes bt ON bi.BedType = bt.BedType
+		JOIN 
+			bedscount bc ON bi.BedType = bc.BedType AND bi.HospitalID = bc.HospitalID
+		WHERE 
+			bi.HospitalID = ? 
+			AND NOT EXISTS (
+				SELECT 1 FROM bedassignments ba 
+				WHERE ba.BedID = bi.BedID AND ba.DischargeDate IS NULL
+			)
+		ORDER BY 
+			bi.BedType, bi.BedID
+		`
+
+		directRows, err := database.DB.Query(directQuery, hospitalID)
+		if err != nil {
+			log.Printf("Error in direct query for available beds: %v", err)
+		} else {
+			defer directRows.Close()
+			for directRows.Next() {
+				var bed struct {
+					BedID       int
+					BedType     string
+					Description string
+					VacantBeds  int
+				}
+
+				err := directRows.Scan(&bed.BedID, &bed.BedType, &bed.Description, &bed.VacantBeds)
+				if err != nil {
+					log.Printf("Error scanning direct bed row: %v", err)
+					continue
+				}
+
+				availableBeds = append(availableBeds, map[string]interface{}{
+					"bedId":       bed.BedID,
+					"bedType":     bed.BedType,
+					"description": bed.Description,
+					"vacantBeds":  bed.VacantBeds,
+					"status":      "available",
+				})
+			}
+			log.Printf("Direct query found %d available beds", len(availableBeds))
+		}
 	}
 
 	// Combine both datasets in the response
