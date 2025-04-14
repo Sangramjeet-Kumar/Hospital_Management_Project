@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Doctor Appointments API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        pre {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Doctor Appointments API Test Tool</h1>
+    
+    <div class="container">
+        <h2>Get Doctor Appointments</h2>
+        <div>
+            <label for="employeeId">Employee ID:</label>
+            <input type="number" id="employeeId" value="2001">
+        </div>
+        <div>
+            <label for="status">Status:</label>
+            <select id="status">
+                <option value="all">All</option>
+                <option value="checked-in">Checked-In</option>
+                <option value="waiting">Waiting</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </div>
+        <button id="getAppointments">Get Appointments</button>
+        <h3>Response:</h3>
+        <pre id="response">No response yet</pre>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const getAppointmentsBtn = document.getElementById('getAppointments');
+            const responseElement = document.getElementById('response');
+            
+            // Get Doctor Appointments
+            getAppointmentsBtn.addEventListener('click', async function() {
+                const employeeId = document.getElementById('employeeId').value;
+                const status = document.getElementById('status').value;
+                
+                if (!employeeId) {
+                    responseElement.textContent = 'Please enter an Employee ID';
+                    responseElement.className = 'error';
+                    return;
+                }
+                
+                try {
+                    responseElement.textContent = 'Sending request...';
+                    responseElement.className = '';
+                    
+                    const url = `http://localhost:8080/api/doctor/appointments?employeeId=${employeeId}&status=${status}`;
+                    console.log('Making request to:', url);
+                    
+                    const response = await fetch(url);
+                    const statusText = `Status: ${response.status} ${response.statusText}`;
+                    
+                    const responseText = await response.text();
+                    console.log('Response received:', responseText);
+                    
+                    let formattedResponse;
+                    try {
+                        // Try to parse and format the JSON
+                        const jsonResponse = JSON.parse(responseText);
+                        formattedResponse = JSON.stringify(jsonResponse, null, 2);
+                        responseElement.className = response.ok ? 'success' : 'error';
+                    } catch (e) {
+                        // If not valid JSON, show the raw text
+                        formattedResponse = responseText;
+                        responseElement.className = 'error';
+                    }
+                    
+                    responseElement.textContent = `${statusText}\n\n${formattedResponse}`;
+                } catch (error) {
+                    console.error('Error:', error);
+                    responseElement.textContent = `Error: ${error.message}`;
+                    responseElement.className = 'error';
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

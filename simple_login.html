@@ -259,25 +259,51 @@
                     console.log('Response status:', response.status);
                     
                     if (response.ok) {
-                        const data = await response.json();
-                        console.log('Login successful:', data);
+                        // First get the raw response text for debugging
+                        const responseText = await response.text();
+                        console.log('Raw successful response:', responseText);
                         
-                        // Store user data
-                        localStorage.setItem('userData', JSON.stringify(data));
-                        
-                        // Show success message
-                        successMessage.textContent = 'Login successful! Redirecting...';
-                        successMessage.style.display = 'block';
-                        
-                        // Redirect based on role
-                        setTimeout(() => {
-                            const redirectPages = {
-                                'admin': 'admin.html',
-                                'doctor': 'doctor_dashboard.html',
-                                'staff': 'staff_dashboard.html'
-                            };
-                            window.location.href = redirectPages[role];
-                        }, 1000);
+                        // Parse the response
+                        let data;
+                        try {
+                            data = JSON.parse(responseText);
+                            console.log('Parsed login data:', data);
+                            
+                            if (data.success) {
+                                // Store user data
+                                localStorage.setItem('userData', JSON.stringify(data));
+                                
+                                // Store the employeeId separately for easier access
+                                console.log('Setting employeeId in localStorage:', data.employeeId);
+                                localStorage.setItem('employeeId', data.employeeId.toString());
+                                
+                                // Show success message
+                                successMessage.textContent = 'Login successful! Redirecting...';
+                                successMessage.style.display = 'block';
+                                
+                                // Redirect based on role
+                                setTimeout(() => {
+                                    const redirectPages = {
+                                        'admin': 'admin.html',
+                                        'doctor': 'doctor_dashboard.html',
+                                        'staff': 'staff_dashboard.html'
+                                    };
+                                    console.log('Redirecting to:', redirectPages[role]);
+                                    window.location.href = redirectPages[role];
+                                }, 1000);
+                            } else {
+                                // If success is false but response was OK
+                                console.error('Login response indicated failure:', data);
+                                errorMessage.textContent = data.message || 'Login failed';
+                                errorMessage.style.display = 'block';
+                                successMessage.style.display = 'none';
+                            }
+                        } catch (parseError) {
+                            console.error('Error parsing login response:', parseError);
+                            errorMessage.textContent = 'Error processing server response';
+                            errorMessage.style.display = 'block';
+                            successMessage.style.display = 'none';
+                        }
                     } else {
                         // If login failed, show error
                         const errorData = await response.text();

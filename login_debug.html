@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .response-area {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: red;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+        .success {
+            color: green;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+        .storage-data {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f0f8ff;
+            border: 1px solid #cce5ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Login Debug Tool</h1>
+        
+        <div class="form-group">
+            <label for="role">Role:</label>
+            <select id="role">
+                <option value="doctor">Doctor</option>
+                <option value="admin">Admin</option>
+                <option value="staff">Staff</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="employeeId">Employee ID:</label>
+            <input type="text" id="employeeId" value="2001">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="doctor123">
+        </div>
+        
+        <button id="loginBtn">Login</button>
+        
+        <div id="error" class="error"></div>
+        <div id="success" class="success"></div>
+        
+        <h3>Raw API Response:</h3>
+        <div id="response" class="response-area">No response yet</div>
+        
+        <h3>LocalStorage Data:</h3>
+        <div id="storageData" class="storage-data">No storage data</div>
+        
+        <div class="actions" style="margin-top: 20px; display: flex; gap: 10px;">
+            <button id="clearStorageBtn" style="width: auto; background-color: #ff5252;">Clear LocalStorage</button>
+            <button id="redirectBtn" style="width: auto; background-color: #4caf50;">Go to Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginBtn = document.getElementById('loginBtn');
+            const clearStorageBtn = document.getElementById('clearStorageBtn');
+            const redirectBtn = document.getElementById('redirectBtn');
+            const responseArea = document.getElementById('response');
+            const storageDataArea = document.getElementById('storageData');
+            const errorArea = document.getElementById('error');
+            const successArea = document.getElementById('success');
+            
+            // Display current localStorage
+            function displayStorageData() {
+                try {
+                    const userData = JSON.parse(localStorage.getItem('userData'));
+                    const employeeId = localStorage.getItem('employeeId');
+                    
+                    storageDataArea.innerHTML = 
+                        `<strong>userData:</strong> ${localStorage.getItem('userData') || 'Not set'}<br><br>` +
+                        `<strong>employeeId:</strong> ${employeeId || 'Not set'}<br><br>` +
+                        `<strong>Parsed userData:</strong><br>` +
+                        (userData ? JSON.stringify(userData, null, 2) : 'Not available');
+                } catch (error) {
+                    storageDataArea.innerHTML = `Error parsing storage data: ${error.message}`;
+                }
+            }
+            
+            // Display initial storage data
+            displayStorageData();
+            
+            // Login button click handler
+            loginBtn.addEventListener('click', async function() {
+                const role = document.getElementById('role').value;
+                const employeeId = document.getElementById('employeeId').value;
+                const password = document.getElementById('password').value;
+                
+                errorArea.style.display = 'none';
+                successArea.style.display = 'none';
+                
+                try {
+                    // Show that we're loading
+                    responseArea.textContent = 'Sending request...';
+                    
+                    // Start login request
+                    console.log('Sending login request with:', { role, employeeId, password });
+                    
+                    const response = await fetch('http://localhost:8080/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            role,
+                            employeeId,
+                            password
+                        })
+                    });
+                    
+                    // Get the raw response text
+                    const responseText = await response.text();
+                    console.log('Raw response:', responseText);
+                    
+                    // Display raw response
+                    responseArea.textContent = `Status: ${response.status} ${response.statusText}\n\nBody:\n${responseText}`;
+                    
+                    // Try to parse JSON response
+                    let data;
+                    try {
+                        data = JSON.parse(responseText);
+                        console.log('Parsed response:', data);
+                        
+                        if (response.ok && data.success) {
+                            // Store user data
+                            localStorage.setItem('userData', JSON.stringify(data));
+                            
+                            // Make sure employeeId is stored as a string
+                            const employeeIdStr = data.employeeId.toString();
+                            localStorage.setItem('employeeId', employeeIdStr);
+                            console.log('Stored employeeId in localStorage:', employeeIdStr);
+                            
+                            successArea.textContent = 'Login successful!';
+                            successArea.style.display = 'block';
+                            
+                            // Refresh storage display
+                            displayStorageData();
+                        } else {
+                            errorArea.textContent = data.message || 'Login failed';
+                            errorArea.style.display = 'block';
+                        }
+                    } catch (e) {
+                        console.error('Error parsing JSON response:', e);
+                        errorArea.textContent = 'Error parsing response: ' + e.message;
+                        errorArea.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error during login request:', error);
+                    responseArea.textContent = 'Error: ' + error.message;
+                    errorArea.textContent = 'Connection error: ' + error.message;
+                    errorArea.style.display = 'block';
+                }
+            });
+            
+            // Clear storage button
+            clearStorageBtn.addEventListener('click', function() {
+                localStorage.removeItem('userData');
+                localStorage.removeItem('employeeId');
+                displayStorageData();
+                successArea.textContent = 'LocalStorage cleared';
+                successArea.style.display = 'block';
+            });
+            
+            // Redirect button
+            redirectBtn.addEventListener('click', function() {
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                
+                if (userData && userData.redirectUrl) {
+                    window.location.href = userData.redirectUrl;
+                } else {
+                    errorArea.textContent = 'No redirect URL found in userData';
+                    errorArea.style.display = 'block';
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

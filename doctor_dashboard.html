@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doctor Dashboard</title>
+    <title>Doctor Dashboard - PulsePoint</title>
     <link rel="stylesheet" href="doctor_dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -17,8 +17,8 @@
             </div>
             <ul class="nav-links">
                 <li class="active" data-tab="appointments"><i class="fas fa-calendar-alt"></i> Appointments</li>
-                <li data-tab="profile"><i class="fas fa-user"></i> Profile</li>
                 <li data-tab="bed-management"><i class="fas fa-bed"></i> Bed Management</li>
+                <li data-tab="profile"><i class="fas fa-user"></i> Profile</li>
                 <li class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Logout</li>
             </ul>
         </nav>
@@ -26,51 +26,35 @@
         <main class="main-content">
             <!-- Appointments Section -->
             <section id="appointments" class="tab-content active">
-                <h2>Today's Appointments</h2>
+                <h2>My Appointments</h2>
                 <div class="appointment-filters">
-                    <button class="filter-btn active" data-status="all">All</button>
-                    <button class="filter-btn" data-status="checked-in">Checked In</button>
-                    <button class="filter-btn" data-status="waiting">Waiting</button>
-                    <button class="filter-btn" data-status="completed">Completed</button>
-                    <button class="filter-btn" data-status="canceled">Canceled</button>
-                </div>
-                <div class="appointments-list" id="appointmentsList">
-                    <!-- Appointments will be populated here -->
-                </div>
-            </section>
-
-            <!-- Profile Section -->
-            <section id="profile" class="tab-content">
-                <h2>Profile & Availability</h2>
-                <div class="profile-grid">
-                    <div class="profile-info">
-                        <h3>Personal Information</h3>
-                        <form id="profileForm">
-                            <div class="form-group">
-                                <label>Full Name</label>
-                                <input type="text" id="fullName" name="fullName">
-                            </div>
-                            <div class="form-group">
-                                <label>Specialty</label>
-                                <input type="text" id="doctorSpecialty" name="specialty">
-                            </div>
-                            <div class="form-group">
-                                <label>Contact Number</label>
-                                <input type="tel" id="contactNumber" name="contactNumber">
-                            </div>
-                            <div class="form-group">
-                                <label>Email</label>
-                                <input type="email" id="email" name="email">
-                            </div>
-                            <button type="submit" class="btn-primary">Update Profile</button>
-                        </form>
+                    <div class="filter-group">
+                        <label for="dateFilter">Date:</label>
+                        <input type="date" id="dateFilter" class="filter-input">
                     </div>
-                    <div class="availability-schedule">
-                        <h3>Weekly Availability</h3>
-                        <div id="availabilityCalendar">
-                            <!-- Calendar will be populated here -->
-                        </div>
+                    <div class="filter-group">
+                        <label for="statusFilter">Status:</label>
+                        <select id="statusFilter" class="filter-input">
+                            <option value="all">All Status</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
                     </div>
+                    <button class="btn-primary" onclick="refreshAppointments()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                
+                <div class="appointment-tabs">
+                    <button class="tab-btn active" data-status="checked-in">Checked In</button>
+                    <button class="tab-btn" data-status="waiting">Waiting</button>
+                    <button class="tab-btn" data-status="completed">Completed</button>
+                    <button class="tab-btn" data-status="cancelled">Cancelled</button>
+                </div>
+                
+                <div class="appointments-container" id="appointmentsContainer">
+                    <!-- Appointments will be populated here by JavaScript -->
                 </div>
             </section>
 
@@ -78,54 +62,165 @@
             <section id="bed-management" class="tab-content">
                 <h2>Bed Management</h2>
                 <div class="bed-management-controls">
+                    <div class="filter-group">
+                        <label for="wardFilter">Ward:</label>
+                        <select id="wardFilter" class="filter-input">
+                            <option value="all">All Wards</option>
+                            <option value="general">General Ward</option>
+                            <option value="emergency">Emergency</option>
+                            <option value="icu">ICU</option>
+                            <option value="pediatric">Pediatric</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="bedStatusFilter">Status:</label>
+                        <select id="bedStatusFilter" class="filter-input">
+                            <option value="all">All Status</option>
+                            <option value="available">Available</option>
+                            <option value="occupied">Occupied</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
                     <div class="search-box">
                         <input type="text" id="bedSearch" placeholder="Search by bed number or patient name...">
+                        <i class="fas fa-search"></i>
                     </div>
-                    <button class="btn-primary" id="allocateNewBed">
-                        <i class="fas fa-plus"></i> Allocate New Bed
-                    </button>
                 </div>
-                <div class="bed-status-filters">
-                    <button class="filter-btn active" data-bed-status="all">All Beds</button>
-                    <button class="filter-btn" data-bed-status="occupied">Occupied</button>
-                    <button class="filter-btn" data-bed-status="available">Available</button>
-                    <button class="filter-btn" data-bed-status="maintenance">Maintenance</button>
+
+                <div class="bed-overview">
+                    <div class="stats-cards">
+                        <div class="stat-card">
+                            <h3>Total Beds</h3>
+                            <p id="totalBeds">100</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Available</h3>
+                            <p id="availableBeds">45</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Occupied</h3>
+                            <p id="occupiedBeds">50</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Maintenance</h3>
+                            <p id="maintenanceBeds">5</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bed-grid" id="bedGrid">
+                        <!-- Bed cards will be populated here by JavaScript -->
+                    </div>
                 </div>
-                <div class="bed-grid" id="bedGrid">
-                    <!-- Bed cards will be populated here -->
+            </section>
+
+            <!-- Profile Section -->
+            <section id="profile" class="tab-content">
+                <h2>Doctor Profile</h2>
+                <div class="profile-container">
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <div class="profile-avatar">
+                                <img src="doctor.jpg" alt="Doctor Profile">
+                            </div>
+                            <div class="profile-info">
+                                <h3 id="profileName">Dr. Name</h3>
+                                <p id="profileSpecialty">Specialty</p>
+                                <p id="profileId">Doctor ID: <span>DR-001</span></p>
+                            </div>
+                        </div>
+                        
+                        <div class="profile-details">
+                            <form id="profileForm">
+                                <div class="form-group">
+                                    <label>Full Name</label>
+                                    <input type="text" id="fullName" name="fullName" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Specialty</label>
+                                    <input type="text" id="doctorSpecialty" name="specialty" readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" id="email" name="email" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Contact Number</label>
+                                    <input type="tel" id="contactNumber" name="contactNumber" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Department</label>
+                                    <input type="text" id="department" name="department" readonly>
+                                </div>
+                                <button type="submit" class="btn-primary">Update Profile</button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <div id="allocationModal" class="modal">
+    <!-- Assign Bed Modal -->
+    <div id="assignBedModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Allocate/Transfer Bed</h2>
-            <form id="bedAllocationForm">
+            <h2>Assign Bed to Patient</h2>
+            <form id="assignBedForm">
                 <div class="form-group">
                     <label>Patient Name</label>
-                    <input type="text" id="patientName" required>
+                    <input type="text" id="patientName" readonly>
+                    <input type="hidden" id="appointmentId">
                 </div>
                 <div class="form-group">
-                    <label>Current Bed Number (if transfer)</label>
-                    <input type="text" id="currentBed">
-                </div>
-                <div class="form-group">
-                    <label>New Bed Number</label>
-                    <select id="newBedNumber" required>
-                        <!-- Available beds will be populated here -->
+                    <label>Ward</label>
+                    <select id="ward" required>
+                        <option value="">Select Ward</option>
+                        <option value="General Ward">General Ward</option>
+                        <option value="ICU">ICU</option>
+                        <option value="Emergency">Emergency</option>
+                        <option value="Pediatric">Pediatric</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Reason for Allocation/Transfer</label>
-                    <textarea id="allocationReason" required></textarea>
+                    <label>Bed Number</label>
+                    <select id="bedNumber" required>
+                        <option value="">Select Bed</option>
+                    </select>
                 </div>
-                <button type="submit" class="btn-primary">Confirm Allocation</button>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="bedNotes" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Assign Bed</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Update Status Modal -->
+    <div id="updateStatusModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Update Appointment Status</h2>
+            <form id="updateStatusForm">
+                <input type="hidden" id="statusAppointmentId">
+                <div class="form-group">
+                    <label>New Status</label>
+                    <select id="newStatus" required>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="checked-in">Checked In</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="statusNotes" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Update Status</button>
             </form>
         </div>
     </div>
 
     <script src="doctor_dashboard.js"></script>
 </body>
-</html> 
+</html>

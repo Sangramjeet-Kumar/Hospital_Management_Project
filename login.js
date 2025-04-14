@@ -107,6 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Store user data in localStorage
                 localStorage.setItem('userData', JSON.stringify(data));
                 
+                // Store the employeeId separately for easier access
+                localStorage.setItem('employeeId', data.employeeId);
+                
                 // Delay redirect slightly to show success message
                 setTimeout(() => {
                     // Redirect to dashboard based on role

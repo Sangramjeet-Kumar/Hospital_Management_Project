@@ -10,7 +10,7 @@ import (
 
 const (
 	user     = "root"        // Your MySQL username
-	password = "mysqlroot*3" // Your MySQL password
+	password = "qwerty_123456" // Your MySQL password
 	dbname   = "hospital_db" // Your database name
 	host     = "localhost"   // localhost
 	port     = 3306          // default MySQL port

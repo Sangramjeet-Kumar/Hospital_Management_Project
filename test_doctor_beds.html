@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Doctor Bed Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        input, select, button {
+            padding: 8px;
+            margin: 5px 0;
+        }
+        button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #3367d6;
+        }
+        pre {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .col {
+            flex: 1;
+            min-width: 200px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Doctor Bed Management API Test Tool</h1>
+    
+    <div class="container">
+        <h2>Get Bed Assignments</h2>
+        <div class="row">
+            <div class="col">
+                <label for="getEmployeeId">Employee ID:</label>
+                <input type="number" id="getEmployeeId" value="2001">
+            </div>
+        </div>
+        <button id="getBeds">Get Beds</button>
+        <h3>Response:</h3>
+        <pre id="getResponse">No response yet</pre>
+    </div>
+    
+    <div class="container">
+        <h2>Assign Bed</h2>
+        <div class="row">
+            <div class="col">
+                <label for="assignEmployeeId">Employee ID:</label>
+                <input type="number" id="assignEmployeeId" value="2001">
+            </div>
+            <div class="col">
+                <label for="assignPatientId">Patient ID:</label>
+                <input type="number" id="assignPatientId">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="assignBedId">Bed ID:</label>
+                <input type="number" id="assignBedId">
+            </div>
+            <div class="col">
+                <label for="assignAdmissionDate">Admission Date:</label>
+                <input type="date" id="assignAdmissionDate">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="assignNotes">Notes:</label>
+                <textarea id="assignNotes" rows="3"></textarea>
+            </div>
+        </div>
+        <button id="assignBed">Assign Bed</button>
+        <h3>Response:</h3>
+        <pre id="assignResponse">No response yet</pre>
+    </div>
+    
+    <div class="container">
+        <h2>Transfer Bed</h2>
+        <div class="row">
+            <div class="col">
+                <label for="transferEmployeeId">Employee ID:</label>
+                <input type="number" id="transferEmployeeId" value="2001">
+            </div>
+            <div class="col">
+                <label for="transferPatientId">Patient ID:</label>
+                <input type="number" id="transferPatientId">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label for="transferNewBedId">New Bed ID:</label>
+                <input type="number" id="transferNewBedId">
+            </div>
+            <div class="col">
+                <label for="transferNotes">Notes:</label>
+                <textarea id="transferNotes" rows="3"></textarea>
+            </div>
+        </div>
+        <button id="transferBed">Transfer Bed</button>
+        <h3>Response:</h3>
+        <pre id="transferResponse">No response yet</pre>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get Beds Button
+            document.getElementById('getBeds').addEventListener('click', async function() {
+                const employeeId = document.getElementById('getEmployeeId').value;
+                const responseElement = document.getElementById('getResponse');
+                
+                if (!employeeId) {
+                    responseElement.textContent = 'Please enter an Employee ID';
+                    responseElement.className = 'error';
+                    return;
+                }
+                
+                try {
+                    responseElement.textContent = 'Sending request...';
+                    responseElement.className = '';
+                    
+                    const url = `http://localhost:8080/api/doctor/beds?employeeId=${employeeId}`;
+                    console.log('Making request to:', url);
+                    
+                    const response = await fetch(url);
+                    const statusText = `Status: ${response.status} ${response.statusText}`;
+                    
+                    const responseText = await response.text();
+                    console.log('Response received:', responseText);
+                    
+                    let formattedResponse;
+                    try {
+                        // Try to parse and format the JSON
+                        const jsonResponse = JSON.parse(responseText);
+                        formattedResponse = JSON.stringify(jsonResponse, null, 2);
+                        responseElement.className = response.ok ? 'success' : 'error';
+                    } catch (e) {
+                        // If not valid JSON, show the raw text
+                        formattedResponse = responseText;
+                        responseElement.className = 'error';
+                    }
+                    
+                    responseElement.textContent = `${statusText}\n\n${formattedResponse}`;
+                } catch (error) {
+                    console.error('Error:', error);
+                    responseElement.textContent = `Error: ${error.message}`;
+                    responseElement.className = 'error';
+                }
+            });
+            
+            // Assign Bed Button
+            document.getElementById('assignBed').addEventListener('click', async function() {
+                const employeeId = document.getElementById('assignEmployeeId').value;
+                const patientId = document.getElementById('assignPatientId').value;
+                const bedId = document.getElementById('assignBedId').value;
+                const admissionDate = document.getElementById('assignAdmissionDate').value;
+                const notes = document.getElementById('assignNotes').value;
+                const responseElement = document.getElementById('assignResponse');
+                
+                if (!employeeId || !patientId || !bedId) {
+                    responseElement.textContent = 'Employee ID, Patient ID, and Bed ID are required';
+                    responseElement.className = 'error';
+                    return;
+                }
+                
+                try {
+                    responseElement.textContent = 'Sending request...';
+                    responseElement.className = '';
+                    
+                    const url = 'http://localhost:8080/api/doctor/assign-bed';
+                    console.log('Making request to:', url);
+                    
+                    const data = {
+                        employeeId: parseInt(employeeId),
+                        patientId: parseInt(patientId),
+                        bedId: parseInt(bedId),
+                        admissionDate: admissionDate,
+                        notes: notes
+                    };
+                    
+                    console.log('Request data:', data);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const statusText = `Status: ${response.status} ${response.statusText}`;
+                    
+                    const responseText = await response.text();
+                    console.log('Response received:', responseText);
+                    
+                    let formattedResponse;
+                    try {
+                        // Try to parse and format the JSON
+                        const jsonResponse = JSON.parse(responseText);
+                        formattedResponse = JSON.stringify(jsonResponse, null, 2);
+                        responseElement.className = response.ok ? 'success' : 'error';
+                    } catch (e) {
+                        // If not valid JSON, show the raw text
+                        formattedResponse = responseText;
+                        responseElement.className = 'error';
+                    }
+                    
+                    responseElement.textContent = `${statusText}\n\n${formattedResponse}`;
+                } catch (error) {
+                    console.error('Error:', error);
+                    responseElement.textContent = `Error: ${error.message}`;
+                    responseElement.className = 'error';
+                }
+            });
+            
+            // Transfer Bed Button
+            document.getElementById('transferBed').addEventListener('click', async function() {
+                const employeeId = document.getElementById('transferEmployeeId').value;
+                const patientId = document.getElementById('transferPatientId').value;
+                const newBedId = document.getElementById('transferNewBedId').value;
+                const notes = document.getElementById('transferNotes').value;
+                const responseElement = document.getElementById('transferResponse');
+                
+                if (!employeeId || !patientId || !newBedId) {
+                    responseElement.textContent = 'Employee ID, Patient ID, and New Bed ID are required';
+                    responseElement.className = 'error';
+                    return;
+                }
+                
+                try {
+                    responseElement.textContent = 'Sending request...';
+                    responseElement.className = '';
+                    
+                    const url = 'http://localhost:8080/api/doctor/transfer-bed';
+                    console.log('Making request to:', url);
+                    
+                    const data = {
+                        employeeId: parseInt(employeeId),
+                        patientId: parseInt(patientId),
+                        newBedId: parseInt(newBedId),
+                        notes: notes
+                    };
+                    
+                    console.log('Request data:', data);
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const statusText = `Status: ${response.status} ${response.statusText}`;
+                    
+                    const responseText = await response.text();
+                    console.log('Response received:', responseText);
+                    
+                    let formattedResponse;
+                    try {
+                        // Try to parse and format the JSON
+                        const jsonResponse = JSON.parse(responseText);
+                        formattedResponse = JSON.stringify(jsonResponse, null, 2);
+                        responseElement.className = response.ok ? 'success' : 'error';
+                    } catch (e) {
+                        // If not valid JSON, show the raw text
+                        formattedResponse = responseText;
+                        responseElement.className = 'error';
+                    }
+                    
+                    responseElement.textContent = `${statusText}\n\n${formattedResponse}`;
+                } catch (error) {
+                    console.error('Error:', error);
+                    responseElement.textContent = `Error: ${error.message}`;
+                    responseElement.className = 'error';
+                }
+            });
+            
+            // Set today's date as default for admission date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('assignAdmissionDate').value = today;
+        });
+    </script>
+</body>
+</html> 

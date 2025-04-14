@@ -3,726 +3,1095 @@ document.addEventListener('DOMContentLoaded', function() {
     const navLinks = document.querySelectorAll('.nav-links li');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    // Store current doctor ID (this would come from login)
-    // For testing purposes, we'll use a hardcoded value
-    const doctorID = 1; // Replace with actual doctor ID from login in production
+    console.log('DOMContentLoaded fired');
 
+    // Get DOM elements
+    const appointmentTabs = document.querySelectorAll('.tab-btn');
+    const dateFilter = document.getElementById('dateFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const wardFilter = document.getElementById('wardFilter');
+    const bedStatusFilter = document.getElementById('bedStatusFilter');
+    const appointmentsContainer = document.getElementById('appointmentsContainer');
+    const bedGrid = document.getElementById('bedGrid');
+    const profileForm = document.getElementById('profileForm');
+    const assignBedModal = document.getElementById('assignBedModal');
+    const assignBedForm = document.getElementById('assignBedForm');
+    const updateStatusModal = document.getElementById('updateStatusModal');
+    const updateStatusForm = document.getElementById('updateStatusForm');
+
+    // Set today's date as default in date filter
+    if (dateFilter) {
+        dateFilter.valueAsDate = new Date();
+    }
+
+    // Debug localStorage data
+    console.log('localStorage userData:', localStorage.getItem('userData'));
+    console.log('localStorage employeeId:', localStorage.getItem('employeeId'));
+    
+    // Try parsing userData
+    try {
+        const userData = JSON.parse(localStorage.getItem('userData'));
+        console.log('Parsed userData:', userData);
+    } catch (error) {
+        console.error('Error parsing userData:', error);
+    }
+
+    // Get logged-in employee ID from localStorage (set during login)
+    const employeeId = localStorage.getItem('employeeId') || sessionStorage.getItem('employeeId');
+    console.log('Resolved employeeId:', employeeId);
+    
+    if (!employeeId) {
+        console.log('No employeeId found, redirecting to login');
+        // Redirect to login if no employee ID
+        window.location.href = 'simple_login.html';
+        return;
+    }
+
+    // Load doctor profile on page load
+    console.log('Attempting to fetch doctor profile with employeeId:', employeeId);
+    fetchDoctorProfile(employeeId);
+
+    // Navigation handling
     navLinks.forEach(link => {
         link.addEventListener('click', () => {
-            const tabId = link.getAttribute('data-tab');
+            if (link.classList.contains('logout-btn')) {
+                handleLogout();
+                return;
+            }
             
-            // Update active states
+            // Remove active class from all links and contents
             navLinks.forEach(l => l.classList.remove('active'));
-            tabContents.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
             
+            // Add active class to clicked link and corresponding content
             link.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            const tabId = link.getAttribute('data-tab');
+            const targetContent = document.getElementById(tabId);
+            if (targetContent) {
+                targetContent.classList.add('active');
 
-            // Load tab specific data
-            loadTabData(tabId);
+                // Load content based on tab
+                switch(tabId) {
+                    case 'appointments':
+                        loadAppointments('checked-in');
+                        break;
+                    case 'bed-management':
+                        loadBeds();
+                        break;
+                    case 'profile':
+                        // Refresh profile data
+                        fetchDoctorProfile(employeeId);
+                        break;
+                }
+            }
         });
     });
 
-    // Function to load data based on the active tab
-    function loadTabData(tabId) {
-        switch(tabId) {
-            case 'appointments':
-                loadAppointments();
-                break;
-            case 'profile':
-                loadDoctorProfile();
-                break;
-            case 'bed-management':
-                loadBeds();
-                break;
-        }
-    }
-
-    // Appointments Management
-    const appointmentsList = document.getElementById('appointmentsList');
-    const appointmentFilters = document.querySelectorAll('.appointment-filters .filter-btn');
-
-    // Load appointments from the backend API
-    async function loadAppointments(status = 'all') {
-        try {
-            console.log(`Fetching appointments for doctor ${doctorID} with status ${status}`);
-            const response = await fetch(`http://localhost:8080/api/doctor/${doctorID}/appointments?status=${status}`);
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`Error response: ${errorText}`);
-                throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorText}`);
-            }
-            const appointments = await response.json();
-            console.log("Appointments data:", appointments);
-            
-            if (!Array.isArray(appointments)) {
-                throw new Error('Invalid response format: expected an array of appointments');
-            }
-            
-            renderAppointments(appointments, status);
-        } catch (error) {
-            console.error('Error loading appointments:', error);
-            appointmentsList.innerHTML = `<p class="error-message">Error loading appointments: ${error.message}. Please try again later.</p>`;
-        }
-    }
-
-    function renderAppointments(appointments, status = 'all') {
-        appointmentsList.innerHTML = '';
-        
-        if (appointments.length === 0) {
-            appointmentsList.innerHTML = `<p class="no-data-message">No appointments found.</p>`;
-            return;
-        }
-
-        appointments.forEach(apt => {
-            // Check the structure of the appointment object and adapt accordingly
-            console.log("Appointment data:", apt);
-            
-            let patientName = apt.patient_name || "Unknown Patient";
-            let appointmentTime = apt.appointment_time || "No time specified";
-            let appointmentStatus = apt.status || "scheduled";
-            let appointmentId = apt.appointment_id;
-            
-            // Handle appointment date based on structure
-            let formattedDate = "No date";
-            if (apt.appointment_date) {
-                try {
-                    const appointmentDate = new Date(apt.appointment_date);
-                    formattedDate = appointmentDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    });
-                } catch (e) {
-                    console.error("Error formatting date:", e);
-                    formattedDate = apt.appointment_date;
-                }
-            }
-
-            const appointmentCard = document.createElement('div');
-            appointmentCard.className = `appointment-card ${appointmentStatus}`;
-            appointmentCard.setAttribute('data-appointment-id', appointmentId);
-            appointmentCard.innerHTML = `
-                <div class="appointment-time">${appointmentTime}</div>
-                <div class="appointment-details">
-                    <h3>${patientName}</h3>
-                    <p class="appointment-date">${formattedDate}</p>
-                    <span class="status-badge ${appointmentStatus}">${appointmentStatus}</span>
-                </div>
-                <div class="appointment-actions">
-                    <button class="btn-primary" onclick="updateAppointmentStatus(${appointmentId})">
-                        Update Status
-                    </button>
-                </div>
-            `;
-            appointmentsList.appendChild(appointmentCard);
-        });
-    }
-
-    // Global function to update appointment status
-    window.updateAppointmentStatus = async function(appointmentId) {
-        const newStatus = prompt("Update status to (checked-in, waiting, completed, canceled):");
-        if (!newStatus) return;
-
-        try {
-            const response = await fetch(`http://localhost:8080/api/appointments/${appointmentId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-
-            // Reload appointments after status update
-            const activeFilter = document.querySelector('.appointment-filters .filter-btn.active');
-            loadAppointments(activeFilter.getAttribute('data-status'));
-            
-            // Special handling based on new status
-            if (newStatus === 'completed') {
-                // Get appointment details for patient info
-                const appointmentCard = document.querySelector(`[data-appointment-id="${appointmentId}"]`);
-                let patientName = "Unknown Patient";
-                
-                if (appointmentCard) {
-                    const patientElement = appointmentCard.querySelector('.appointment-patient');
-                    if (patientElement) {
-                        patientName = patientElement.textContent.replace('Patient:', '').trim();
-                    }
-                }
-                
-                // Show bed allocation modal
-                alert(`Appointment completed. Please allocate a bed for ${patientName} if needed.`);
-                
-                // Trigger bed allocation modal
-                if (typeof showAllocationModal === 'function') {
-                    showAllocationModal(patientName);
-                } else {
-                    // Fallback if specific function isn't available
-                    const allocationModal = document.getElementById('allocationModal');
-                    if (allocationModal) {
-                        // Try to pre-fill patient name if the field exists
-                        const patientNameInput = document.getElementById('patientName');
-                        if (patientNameInput) {
-                            patientNameInput.value = patientName;
-                        }
-                        allocationModal.style.display = 'block';
-                    }
-                }
-            } else if (newStatus === 'canceled') {
-                // No bed allocation needed for canceled appointments
-                alert('Appointment canceled. No bed will be allocated.');
-            }
-        } catch (error) {
-            console.error('Error updating appointment status:', error);
-            alert('Failed to update appointment status. Please try again.');
-        }
-    };
-
-    appointmentFilters.forEach(filter => {
-        filter.addEventListener('click', () => {
-            appointmentFilters.forEach(f => f.classList.remove('active'));
-            filter.classList.add('active');
-            
-            // Get status from the button's data attribute
-            const status = filter.getAttribute('data-status');
-            console.log("Selected appointment filter:", status);
-            
-            // Load appointments with selected status
-            loadAppointments(status);
+    // Appointment Tabs
+    appointmentTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            appointmentTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            loadAppointments(tab.getAttribute('data-status'));
         });
     });
 
-    // Profile Management
-    const profileForm = document.getElementById('profileForm');
-    const doctorNameElement = document.getElementById('doctorName');
-    const specialtyElement = document.getElementById('specialty');
-    
-    // Load doctor profile from the backend API
-    async function loadDoctorProfile() {
-        try {
-            const response = await fetch(`http://localhost:8080/api/doctor/${doctorID}/profile`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const doctor = await response.json();
-            console.log("Doctor profile data:", doctor);
-            
-            // Handle both camelCase and snake_case field names
-            const fullName = doctor.full_name || doctor.fullName || "Unknown";
-            const department = doctor.department || doctor.specialty || "";
-            const contactNumber = doctor.contact_number || doctor.contactNumber || "";
-            const email = doctor.email || "";
-            
-            // Update profile display and form
-            doctorNameElement.textContent = `Dr. ${fullName}`;
-            specialtyElement.textContent = department;
-            
-            // Populate form fields
-            document.getElementById('fullName').value = fullName;
-            document.getElementById('doctorSpecialty').value = department;
-            document.getElementById('contactNumber').value = contactNumber;
-            document.getElementById('email').value = email;
-            
-            // Initialize availability calendar
-            renderAvailabilityCalendar();
-        } catch (error) {
-            console.error('Error loading doctor profile:', error);
-            alert('Failed to load doctor profile. Please try again.');
-        }
+    // Filter Change Handlers
+    if (dateFilter) {
+        dateFilter.addEventListener('change', () => loadAppointments(getActiveAppointmentStatus()));
     }
     
-    profileForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        try {
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => loadAppointments(getActiveAppointmentStatus()));
+    }
+    
+    if (wardFilter) {
+        wardFilter.addEventListener('change', loadBeds);
+    }
+    
+    if (bedStatusFilter) {
+        bedStatusFilter.addEventListener('change', loadBeds);
+    }
+            
+    // Profile Form Submit
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
             const formData = new FormData(profileForm);
-            const profileData = {
-                full_name: formData.get('fullName'),
-                description: 'Updated profile',
+            const data = {
                 contact_number: formData.get('contactNumber'),
                 email: formData.get('email')
             };
             
-            const response = await fetch(`http://localhost:8080/api/doctor/${doctorID}/profile`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(profileData)
+            try {
+                // Fix for potential colon issue - force to integer
+                const cleanEmployeeId = parseInt(employeeId, 10);
+                if (isNaN(cleanEmployeeId)) {
+                    console.error('Invalid employeeId format:', employeeId);
+                    showMessage('Invalid employee ID format', 'error');
+                    return;
+                }
+                
+                console.log(`Making API call to update profile for employeeId=${cleanEmployeeId}`, data);
+                const response = await fetch(`http://localhost:8080/api/doctor/profile/update?employeeId=${cleanEmployeeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('Update profile response status:', response.status);
+                
+                if (response.ok) {
+                    const responseText = await response.text();
+                    console.log('Update profile response:', responseText);
+                    
+                    showMessage('Profile updated successfully', 'success');
+                    // Refresh profile data to show the updates
+                    fetchDoctorProfile(cleanEmployeeId);
+                } else {
+                    const errorText = await response.text();
+                    console.error('Failed to update profile:', errorText);
+                    throw new Error(errorText || 'Failed to update profile');
+                }
+            } catch (error) {
+                console.error('Profile update error:', error);
+                showMessage(error.message || 'Failed to update profile', 'error');
+            }
+        });
+    }
+    
+    // Assign Bed Form Submit
+    if (assignBedForm) {
+        assignBedForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            console.log('Assign bed form submitted');
+            
+            // Get form values
+            const formData = new FormData(assignBedForm);
+            const patientName = formData.get('patientName');
+            const appointmentId = formData.get('appointmentId');
+            const bedId = formData.get('bedNumber');
+            
+            console.log('Form data:', {
+                patientName,
+                appointmentId,
+                bedId
             });
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            
-            // Update displayed profile
-            doctorNameElement.textContent = `Dr. ${profileData.full_name}`;
-            alert('Profile updated successfully!');
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            alert('Failed to update profile. Please try again.');
-        }
-    });
-
-    // Availability Calendar
-    const availabilityCalendar = document.getElementById('availabilityCalendar');
-    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    
-    function renderAvailabilityCalendar() {
-        const calendarHTML = days.map(day => `
-            <div class="day-schedule">
-                <h4>${day}</h4>
-                <div class="time-slots">
-                    <label>
-                        <input type="checkbox" name="${day.toLowerCase()}_morning" value="morning">
-                        Morning (9AM - 12PM)
-                    </label>
-                    <label>
-                        <input type="checkbox" name="${day.toLowerCase()}_afternoon" value="afternoon">
-                        Afternoon (2PM - 5PM)
-                    </label>
-                </div>
-            </div>
-        `).join('');
-        
-        availabilityCalendar.innerHTML = calendarHTML;
-    }
-
-    // Bed Management
-    const bedGrid = document.getElementById('bedGrid');
-    const bedSearch = document.getElementById('bedSearch');
-    const bedStatusFilters = document.querySelectorAll('.bed-status-filters .filter-btn');
-    const allocateNewBedBtn = document.getElementById('allocateNewBed');
-    const allocationModal = document.getElementById('allocationModal');
-    const closeModal = document.querySelector('.close');
-    const bedAllocationForm = document.getElementById('bedAllocationForm');
-    const newBedNumberSelect = document.getElementById('newBedNumber');
-    const patientNameInput = document.getElementById('patientName');
-    let doctorPatients = []; // Will store patients data
-
-    // Load beds from the backend API
-    async function loadBeds(status = 'all') {
-        try {
-            console.log(`Fetching beds for doctor ${doctorID} with status ${status}`);
-            
-            // Show loading indicator
-            bedGrid.innerHTML = `<p class="loading-message">Loading bed data...</p>`;
-            
-            const endpoint = `http://localhost:8080/api/doctor/${doctorID}/beds${status !== 'all' ? '?status=' + status : ''}`;
-            console.log("Bed API endpoint:", endpoint);
-            
-            const response = await fetch(endpoint);
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`Error response: ${errorText}`);
-                throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorText}`);
-            }
-            const beds = await response.json();
-            console.log("Beds data:", beds);
-            renderBeds(beds);
-        } catch (error) {
-            console.error('Error loading beds:', error);
-            bedGrid.innerHTML = `<p class="error-message">Error loading bed data: ${error.message}. Please try again later.</p>`;
-        }
-    }
-
-    async function loadPatients() {
-        try {
-            const response = await fetch(`http://localhost:8080/api/doctor/${doctorID}/patients`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            doctorPatients = await response.json();
-        } catch (error) {
-            console.error('Error loading patients:', error);
-            doctorPatients = [];
-        }
-    }
-
-    function updateAvailableBeds(beds) {
-        // Clear existing options
-        newBedNumberSelect.innerHTML = '';
-        
-        // Add available beds to the select dropdown
-        beds.filter(bed => bed.status === 'available').forEach(bed => {
-            const option = document.createElement('option');
-            option.value = bed.bedID;
-            option.textContent = `Bed ${bed.bedID} (${bed.bedType})`;
-            newBedNumberSelect.appendChild(option);
-        });
-    }
-
-    function renderBeds(beds) {
-        bedGrid.innerHTML = '';
-        
-        if (beds.length === 0) {
-            bedGrid.innerHTML = `<p class="no-data-message">No beds found.</p>`;
-            return;
-        }
-
-        beds.forEach(bed => {
-            const bedCard = document.createElement('div');
-            bedCard.className = `bed-card ${bed.status}`;
-            bedCard.innerHTML = `
-                <h3>Bed ${bed.bedID}</h3>
-                <p class="bed-type">${bed.bedType}</p>
-                <div class="bed-status">
-                    <span class="status-badge ${bed.status}">${bed.status}</span>
-                </div>
-                ${bed.patientName ? `<p>Patient: ${bed.patientName}</p>` : ''}
-                ${bed.admissionDate ? `<p>Admitted: ${bed.admissionDate}</p>` : ''}
-                <button class="btn-primary" onclick="manageBed('${bed.bedID}', '${bed.status}', '${bed.patientID || 0}')">
-                    ${bed.status === 'occupied' ? 'View Details' : 'Allocate Bed'}
-                </button>
-            `;
-            bedGrid.appendChild(bedCard);
-        });
-
-        // Store beds data for modal
-        window.bedsData = beds;
-        updateAvailableBeds(beds);
-    }
-
-    // Global function to manage beds
-    window.manageBed = function(bedId, status, patientId) {
-        // Reset form
-        bedAllocationForm.reset();
-        
-        // Update modal title and form based on action type
-        const modalTitle = allocationModal.querySelector('h2');
-        const currentBedInput = document.getElementById('currentBed');
-
-        if (status === 'occupied') {
-            modalTitle.textContent = 'Bed Details';
-            currentBedInput.value = bedId;
-            currentBedInput.disabled = true;
-            
-            const bed = window.bedsData.find(b => b.bedID == bedId);
-            if (bed && bed.patientName) {
-                patientNameInput.value = bed.patientName;
-                patientNameInput.disabled = true;
-                document.getElementById('allocationReason').value = '';
-                document.getElementById('allocationReason').disabled = true;
-            }
-        } else {
-            modalTitle.textContent = 'Allocate New Bed';
-            currentBedInput.value = '';
-            currentBedInput.disabled = true;
-            patientNameInput.value = '';
-            patientNameInput.disabled = false;
-            document.getElementById('allocationReason').disabled = false;
-            document.getElementById('allocationReason').value = '';
-            
-            // Create patient dropdown
-            createPatientDropdown();
-        }
-        
-        // Show modal
-        allocationModal.style.display = 'block';
-    };
-
-    function createPatientDropdown() {
-        // Create datalist for patient suggestions
-        let datalist = document.getElementById('patient-suggestions');
-        if (!datalist) {
-            datalist = document.createElement('datalist');
-            datalist.id = 'patient-suggestions';
-            document.body.appendChild(datalist);
-            patientNameInput.setAttribute('list', 'patient-suggestions');
-        }
-        
-        // Clear existing options
-        datalist.innerHTML = '';
-        
-        // Add patient options
-        doctorPatients.forEach(patient => {
-            const option = document.createElement('option');
-            option.value = patient.full_name;
-            option.dataset.patientId = patient.patient_id;
-            datalist.appendChild(option);
-        });
-    }
-
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        if (event.target === allocationModal) {
-            allocationModal.style.display = 'none';
-        }
-    };
-
-    closeModal.addEventListener('click', () => {
-        allocationModal.style.display = 'none';
-    });
-
-    allocateNewBedBtn.addEventListener('click', () => {
-        // Reset form for new allocation
-        bedAllocationForm.reset();
-        
-        // Update modal for new allocation
-        allocationModal.querySelector('h2').textContent = 'Allocate New Bed';
-        document.getElementById('currentBed').value = '';
-        document.getElementById('currentBed').disabled = true;
-        patientNameInput.value = '';
-        patientNameInput.disabled = false;
-        document.getElementById('allocationReason').disabled = false;
-        document.getElementById('allocationReason').value = '';
-        
-        // Create patient dropdown
-        createPatientDropdown();
-        
-        // Show modal
-        allocationModal.style.display = 'block';
-    });
-
-    bedAllocationForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        if (allocationModal.querySelector('h2').textContent === 'Bed Details') {
-            // Just close the modal for view mode
-            allocationModal.style.display = 'none';
-            return;
-        }
-        
-        try {
-            // Get selected patient ID from the datalist option
-            const patientName = patientNameInput.value;
+            // Get patient ID from the appointmentId
             let patientId = null;
+            const appointmentsContainer = document.getElementById('appointmentsContainer');
             
-            for (const patient of doctorPatients) {
-                if (patient.full_name === patientName) {
-                    patientId = patient.patient_id;
-                    break;
+            if (appointmentsContainer) {
+                const appointmentCard = appointmentsContainer.querySelector(`[data-appointment-id="${appointmentId}"]`);
+                if (appointmentCard) {
+                    patientId = appointmentCard.getAttribute('data-patient-id');
+                    console.log(`Found patient ID ${patientId} from appointment card`);
+                }
+            }
+            
+            // If we couldn't get patientId from DOM, try to get from cached appointments data
+            if (!patientId && window.currentAppointments) {
+                const appointment = window.currentAppointments.find(a => a.id === appointmentId);
+                
+                if (appointment) {
+                    patientId = appointment.patientId;
+                    console.log(`Found patient ID ${patientId} from cached appointments data`);
                 }
             }
             
             if (!patientId) {
-                throw new Error('Patient not found. Please select a valid patient.');
+                const errorMsg = 'Error: Could not determine patient ID';
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error');
+                return;
             }
             
-            const bedId = parseInt(newBedNumberSelect.value);
-            
-            const response = await fetch('http://localhost:8080/api/doctor/bed/allocate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    bedID: bedId,
-                    patientID: patientId
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+            // Get employeeId from localStorage
+            const employeeId = localStorage.getItem('employeeId');
+            if (!employeeId) {
+                const errorMsg = 'Error: Missing employee ID';
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error');
+                return;
             }
             
-            // Close modal and reload beds
-            allocationModal.style.display = 'none';
+            if (!bedId) {
+                const errorMsg = 'Please select a bed';
+                console.error(errorMsg);
+                showMessage(errorMsg, 'error');
+                return;
+            }
             
-            // Reload bed data
-            const activeFilter = document.querySelector('.bed-status-filters .filter-btn.active');
-            loadBeds(activeFilter.getAttribute('data-bed-status'));
+            // Prepare request payload
+            const payload = {
+                employeeId: parseInt(employeeId),
+                patientId: parseInt(patientId),
+                bedId: parseInt(bedId)
+            };
             
-            alert('Bed allocated successfully!');
-        } catch (error) {
-            console.error('Error allocating bed:', error);
-            alert(error.message || 'Failed to allocate bed. Please try again.');
-        }
-    });
-
-    bedStatusFilters.forEach(filter => {
-        filter.addEventListener('click', () => {
-            bedStatusFilters.forEach(f => f.classList.remove('active'));
-            filter.classList.add('active');
+            console.log('Sending assign bed request with payload:', payload);
             
-            // Get status from the button's data attribute
-            const status = filter.getAttribute('data-bed-status');
-            console.log("Selected bed status filter:", status);
-            
-            // Load beds with selected status
-            loadBeds(status);
-        });
-    });
-
-    bedSearch.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const beds = window.bedsData || [];
-        
-        if (!searchTerm) {
-            renderBeds(beds);
-            return;
-        }
-        
-        const filteredBeds = beds.filter(bed => {
-            return (
-                bed.bedID.toString().includes(searchTerm) ||
-                (bed.patientName && bed.patientName.toLowerCase().includes(searchTerm)) ||
-                bed.bedType.toLowerCase().includes(searchTerm)
-            );
-        });
-        
-        renderBeds(filteredBeds);
-    });
-
-    // Handle logout
-    window.handleLogout = function() {
-        // Clear any user session data
-        localStorage.removeItem('doctorID');
-        // Redirect to login page
-        window.location.href = 'login.html';
-    };
-
-    // Initial data load
-    loadAppointments();
-    loadDoctorProfile();
-    loadPatients();
-
-    // Add this function to explicitly show bed allocation modal
-    window.showAllocationModal = function(patientName, patientId) {
-        // Try to find the allocation modal
-        const allocationModal = document.getElementById('bedAllocationModal');
-        
-        if (!allocationModal) {
-            // Create a modal if it doesn't exist
-            const modal = document.createElement('div');
-            modal.id = 'bedAllocationModal';
-            modal.className = 'modal';
-            
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <span class="close" onclick="document.getElementById('bedAllocationModal').style.display='none'">&times;</span>
-                    <h2>Allocate Bed for Patient</h2>
-                    <form id="bedAllocationForm">
-                        <div class="form-group">
-                            <label>Patient Name</label>
-                            <input type="text" id="patientNameForBed" value="${patientName || ''}" readonly>
-                            <input type="hidden" id="patientIdForBed" value="${patientId || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label>Ward</label>
-                            <select id="wardForBed" required>
-                                <option value="">Select Ward</option>
-                                <option value="general">General Ward</option>
-                                <option value="emergency">Emergency</option>
-                                <option value="icu">ICU</option>
-                                <option value="pediatric">Pediatric</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Bed</label>
-                            <select id="bedNumberForBed" required>
-                                <option value="">Select Ward First</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Admission Notes</label>
-                            <textarea id="admissionNotes" rows="3"></textarea>
-                        </div>
-                        <button type="submit" class="btn-primary">Allocate Bed</button>
-                    </form>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            // Add event listener for ward selection to load appropriate beds
-            document.getElementById('wardForBed').addEventListener('change', async function() {
-                const wardValue = this.value;
-                if (!wardValue) return;
+            try {
+                const apiUrl = 'http://localhost:8080/api/doctor/assign-bed-from-appointment';
+                console.log(`Making API call to ${apiUrl}`);
                 
-                try {
-                    const response = await fetch(`http://localhost:8080/api/staff/beds?ward=${wardValue}&status=available`);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                console.log('Assign bed response status:', response.status, response.statusText);
+                
+                const responseText = await response.text();
+                console.log('Raw assign bed response:', responseText);
+                
+                if (response.ok) {
+                    let responseData;
+                    try {
+                        responseData = JSON.parse(responseText);
+                        console.log('Parsed assign bed response:', responseData);
+                        
+                        showMessage(responseData.message || 'Bed assigned successfully', 'success');
+                    } catch (parseError) {
+                        console.warn('Could not parse success response as JSON:', parseError);
+                        showMessage('Bed assigned successfully', 'success');
                     }
                     
-                    const beds = await response.json();
-                    const bedSelect = document.getElementById('bedNumberForBed');
+                    closeModal(assignBedModal);
                     
-                    bedSelect.innerHTML = '<option value="">Select Bed</option>';
-                    beds.forEach(bed => {
-                        const option = document.createElement('option');
-                        option.value = bed.id;
-                        option.textContent = `Bed ${bed.number} (${bed.ward})`;
-                        bedSelect.appendChild(option);
-                    });
-                } catch (error) {
-                    console.error('Error loading beds:', error);
-                    alert('Failed to load available beds. Please try again.');
+                    // Refresh bed data
+                    loadBeds();
+                    // Also refresh appointments to update the UI
+                    loadAppointments(getActiveAppointmentStatus());
+                } else {
+                    // Try to parse error message from response
+                    let errorMessage = 'Failed to assign bed';
+                    try {
+                        const errorData = JSON.parse(responseText);
+                        errorMessage = errorData.message || errorMessage;
+                        console.error('Error response from API:', errorData);
+                    } catch (e) {
+                        console.error('Error parsing error response:', e);
+                        errorMessage = responseText || `Server error: ${response.status} ${response.statusText}`;
+                    }
+                    showMessage(errorMessage, 'error');
                 }
-            });
+            } catch (error) {
+                console.error('Network error assigning bed:', error);
+                showMessage('Failed to assign bed: ' + error.message, 'error');
+            }
+        });
+    }
+    
+    // Update Status Form Submit
+    if (updateStatusForm) {
+        updateStatusForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+            const formData = new FormData(updateStatusForm);
+            const data = Object.fromEntries(formData.entries());
             
-            // Add event listener for form submission
-            document.getElementById('bedAllocationForm').addEventListener('submit', async function(e) {
-                e.preventDefault();
+            try {
+                // In a real app, this would be an API call to update status
+                showMessage('Appointment status updated successfully', 'success');
+                closeModal(updateStatusModal);
+                loadAppointments(getActiveAppointmentStatus());
+            } catch (error) {
+                showMessage('Failed to update appointment status', 'error');
+            }
+        });
+    }
+
+    // Ward selection change handler
+    const wardSelect = document.getElementById('ward');
+    if (wardSelect) {
+        wardSelect.addEventListener('change', loadAvailableBeds);
+    }
+
+    // Initialize the dashboard
+    loadAppointments('checked-in');
+    
+    // Helper Functions
+    function getActiveAppointmentStatus() {
+        const activeTab = document.querySelector('.tab-btn.active');
+        return activeTab ? activeTab.getAttribute('data-status') : 'checked-in';
+    }
+
+    // Function to fetch doctor profile data from the API
+    async function fetchDoctorProfile(employeeId) {
+        try {
+            if (!employeeId) {
+                console.error('No employeeId provided to fetchDoctorProfile');
+                showMessage('Missing employee ID', 'error');
+                return;
+            }
+            
+            // Fix for potential colon issue in some browsers - force to integer
+            const cleanEmployeeId = parseInt(employeeId, 10);
+            if (isNaN(cleanEmployeeId)) {
+                console.error('Invalid employeeId format:', employeeId);
+                showMessage('Invalid employee ID format', 'error');
+                return;
+            }
+            
+            const apiUrl = `http://localhost:8080/api/doctor/profile?employeeId=${cleanEmployeeId}`;
+            console.log(`Making API call to ${apiUrl}`);
+            
+            const response = await fetch(apiUrl);
+            
+            console.log('Doctor profile response status:', response.status, response.statusText);
+            
+            if (response.ok) {
+                const responseText = await response.text();
+                console.log('Raw doctor profile response:', responseText);
                 
-                const patientId = document.getElementById('patientIdForBed').value;
-                const bedId = document.getElementById('bedNumberForBed').value;
-                const notes = document.getElementById('admissionNotes').value;
-                
-                if (!bedId) {
-                    alert('Please select a bed');
+                if (!responseText || responseText.trim() === '') {
+                    console.error('Empty response received from doctor profile endpoint');
+                    showMessage('Server returned empty response', 'error');
                     return;
                 }
                 
                 try {
-                    // If we have a patient ID, use the formal API
-                    if (patientId) {
-                        const response = await fetch('http://localhost:8080/api/doctor/bed/allocate', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                patientId: parseInt(patientId),
-                                bedId: parseInt(bedId),
-                                notes: notes
-                            }),
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
-                        }
-                        
-                        const result = await response.json();
-                        if (result.success) {
-                            alert('Bed allocated successfully');
-                            document.getElementById('bedAllocationModal').style.display = 'none';
-                            // Refresh bed data
-                            if (typeof loadBeds === 'function') {
-                                loadBeds();
-                            }
-                        } else {
-                            alert(`Bed allocation failed: ${result.message}`);
-                        }
-                    } else {
-                        // If no patient ID (just name), use the generic function
-                        alert(`For patient "${document.getElementById('patientNameForBed').value}", please use the staff dashboard to complete bed allocation.`);
-                        document.getElementById('bedAllocationModal').style.display = 'none';
-                    }
-                } catch (error) {
-                    console.error('Error allocating bed:', error);
-                    alert(`Error allocating bed: ${error.message}`);
+                    const doctorProfile = JSON.parse(responseText);
+                    console.log('Parsed doctor profile:', doctorProfile);
+                    initializeDoctorProfile(doctorProfile);
+                    showMessage('Profile loaded successfully', 'success');
+                } catch (parseError) {
+                    console.error('Error parsing doctor profile response:', parseError);
+                    throw new Error('Invalid response format from profile endpoint');
                 }
-            });
-        } else {
-            // Update existing modal with patient info
-            const patientNameField = document.getElementById('patientNameForBed');
-            if (patientNameField) {
-                patientNameField.value = patientName || '';
+            } else {
+                try {
+                    const errorData = await response.text();
+                    console.error('Error response from doctor profile API:', errorData);
+                    throw new Error(errorData || `Failed to fetch doctor profile: ${response.status} ${response.statusText}`);
+                } catch (parseError) {
+                    console.error('Error parsing error response from profile endpoint:', parseError);
+                    throw new Error(`Failed to fetch doctor profile: ${response.status} ${response.statusText}`);
+                }
             }
+        } catch (error) {
+            console.error('Doctor profile fetch error:', error);
+            showMessage(error.message || 'Failed to fetch doctor profile', 'error');
+        }
+    }
+
+    function showAssignBedModal(patientName, appointmentId) {
+        const modal = document.getElementById('assignBedModal');
+    const patientNameInput = document.getElementById('patientName');
+        const appointmentIdInput = document.getElementById('appointmentId');
+        
+        patientNameInput.value = patientName;
+        appointmentIdInput.value = appointmentId;
             
-            const patientIdField = document.getElementById('patientIdForBed');
-            if (patientIdField && patientId) {
-                patientIdField.value = patientId;
-            }
+        // Load available beds for the ward
+        loadAvailableBeds();
+        
+        modal.style.display = 'block';
+    }
+
+    function loadAvailableBeds() {
+        const bedSelect = document.getElementById('bedNumber');
+        const wardSelect = document.getElementById('ward');
+        
+        if (!bedSelect) {
+            console.error('Bed select element not found in the DOM');
+            return;
         }
         
-        // Show the modal
-        document.getElementById('bedAllocationModal').style.display = 'block';
+        if (!wardSelect) {
+            console.error('Ward select element not found in the DOM');
+            return;
+        }
+        
+        // Clear previous options
+        bedSelect.innerHTML = '<option value="">Select Bed</option>';
+        
+        // Get employee ID from localStorage
+        const employeeId = localStorage.getItem('employeeId');
+        if (!employeeId) {
+            console.error('No employee ID available for loading available beds');
+            showMessage('Error: Missing employee ID', 'error');
+            return;
+        }
+        
+        // Log the selected ward
+        const selectedWard = wardSelect.value.toLowerCase();
+        console.log(`Loading available beds for ward: ${selectedWard || 'all'}`);
+        
+        // Fetch available beds from API
+        const apiUrl = `http://localhost:8080/api/doctor/beds?employeeId=${employeeId}`;
+        console.log(`Fetching beds for dropdown from: ${apiUrl}`);
+        
+        fetch(apiUrl)
+            .then(response => {
+                console.log('Available beds response status:', response.status, response.statusText);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch beds: ${response.status} ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw available beds response:', text);
+                if (!text || text.trim() === '') {
+                    console.warn('Empty response from beds endpoint');
+                    return { availableBeds: [] };
+                }
+                // Parse the response JSON
+                return JSON.parse(text);
+            })
+            .then(data => {
+                console.log('Available beds data:', data);
+                
+                if (!data.availableBeds || !Array.isArray(data.availableBeds)) {
+                    console.error('Invalid bed data format - missing availableBeds array');
+                    throw new Error('Invalid bed data format');
+                }
+                
+                console.log(`Found ${data.availableBeds.length} total available beds`);
+                
+                // Filter beds by selected ward if applicable
+                const filteredBeds = selectedWard ? 
+                    data.availableBeds.filter(bed => bed.bedType.toLowerCase() === selectedWard) : 
+                    data.availableBeds;
+                    
+                console.log(`After ward filter (${selectedWard || 'all'}): ${filteredBeds.length} beds`);
+                
+                // Add bed options to select
+                filteredBeds.forEach(bed => {
+                    const option = document.createElement('option');
+                    option.value = bed.bedId;
+                    option.textContent = `Bed ${bed.bedId} (${bed.bedType})`;
+                    bedSelect.appendChild(option);
+                });
+                
+                if (filteredBeds.length === 0) {
+                    const option = document.createElement('option');
+                    option.disabled = true;
+                    option.textContent = 'No available beds';
+                    bedSelect.appendChild(option);
+                    console.warn('No available beds found after filtering');
+                } else {
+                    console.log(`Added ${filteredBeds.length} options to bed dropdown`);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading available beds:', error);
+                showMessage('Failed to load available beds: ' + error.message, 'error');
+                
+                // Fallback to mock data
+                console.log('Using mock data for bed dropdown');
+                const mockBeds = [
+                    { bedId: 1, bedType: 'General Ward' },
+                    { bedId: 2, bedType: 'General Ward' },
+                    { bedId: 3, bedType: 'ICU' }
+                ];
+                
+                const filteredBeds = selectedWard ? 
+                    mockBeds.filter(bed => bed.bedType.toLowerCase() === selectedWard) : 
+                    mockBeds;
+                    
+                filteredBeds.forEach(bed => {
+                    const option = document.createElement('option');
+                    option.value = bed.bedId;
+                    option.textContent = `Bed ${bed.bedId} (${bed.bedType})`;
+                    bedSelect.appendChild(option);
+                });
+                
+                console.log(`Added ${filteredBeds.length} mock options to bed dropdown`);
+            });
+    }
+
+    function updateAppointmentStatus(appointmentId, currentStatus) {
+        const modal = document.getElementById('updateStatusModal');
+        const statusSelect = document.getElementById('newStatus');
+        const appointmentIdInput = document.getElementById('statusAppointmentId');
+        
+        appointmentIdInput.value = appointmentId;
+        statusSelect.value = currentStatus;
+        
+        modal.style.display = 'block';
+    }
+
+    function closeModal(modal) {
+        modal.style.display = 'none';
+    }
+
+    function showMessage(message, type = 'info') {
+        const messageContainer = document.getElementById('message-container') || createMessageContainer();
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${type}`;
+        messageElement.textContent = message;
+        
+        messageContainer.appendChild(messageElement);
+        
+        setTimeout(() => {
+            messageElement.classList.add('fade-out');
+            setTimeout(() => messageElement.remove(), 300);
+        }, 3000);
+    }
+
+    function createMessageContainer() {
+        const container = document.createElement('div');
+        container.id = 'message-container';
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    function initializeDoctorProfile(doctor) {
+        try {
+            console.log('Initializing doctor profile with data:', doctor);
+            
+            if (!doctor) {
+                console.error('No doctor profile data provided');
+                showMessage('Error loading profile data', 'error');
+                return;
+            }
+            
+        // Update sidebar profile
+            document.getElementById('doctorName').textContent = doctor.full_name || 'Unknown';
+            document.getElementById('specialty').textContent = doctor.department || 'Unknown';
+        
+        // Update profile page
+            document.getElementById('profileName').textContent = doctor.full_name || 'Unknown';
+            document.getElementById('profileSpecialty').textContent = doctor.department || 'Unknown';
+            document.getElementById('profileId').innerHTML = `Doctor ID: <span>${doctor.doctor_id || 'Unknown'}</span>`;
+        
+        // Update form fields
+            document.getElementById('fullName').value = doctor.full_name || '';
+            document.getElementById('doctorSpecialty').value = doctor.department || '';
+            document.getElementById('email').value = doctor.email || '';
+            document.getElementById('contactNumber').value = doctor.contact_number || '';
+            document.getElementById('department').value = doctor.department || '';
+            
+            console.log('Doctor profile initialized successfully');
+        } catch (error) {
+            console.error('Error in initializeDoctorProfile:', error);
+            showMessage('Failed to initialize doctor profile', 'error');
+        }
+    }
+
+    // Mock data functions (replace with actual API calls in production)
+    function loadAppointments(status = 'checked-in') {
+        console.log(`Fetching appointments for employeeId: ${employeeId}, status: ${status}`);
+        
+        // Get the clean employee ID
+        const cleanEmployeeId = parseInt(employeeId, 10);
+        if (isNaN(cleanEmployeeId)) {
+            console.error('Invalid employeeId format:', employeeId);
+            showMessage('Invalid employee ID format', 'error');
+            return;
+        }
+        
+        // Show loading state
+        if (appointmentsContainer) {
+            appointmentsContainer.innerHTML = '<div class="loading">Loading appointments...</div>';
+        }
+        
+        // Get the date from the date filter
+        const selectedDate = dateFilter ? dateFilter.value : new Date().toISOString().split('T')[0];
+        const selectedStatus = statusFilter ? statusFilter.value : 'all';
+        
+        // Format the API URL
+        const apiUrl = `http://localhost:8080/api/doctor/appointments?employeeId=${cleanEmployeeId}&status=${status}`;
+        console.log('Fetching appointments from:', apiUrl);
+        
+        // Fetch appointments from the API
+        fetch(apiUrl)
+            .then(response => {
+                console.log('Appointments response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch appointments: ${response.status} ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(text => {
+                console.log('Appointments response text:', text);
+                if (!text || text.trim() === '') {
+                    // If response is empty, treat as empty array
+                    return [];
+                }
+                // Parse the response JSON
+                return JSON.parse(text);
+            })
+            .then(appointments => {
+                console.log('Received appointments:', appointments);
+                
+                // Filter appointments based on date if necessary
+                let filteredAppointments = appointments;
+                
+                if (selectedDate) {
+                    filteredAppointments = filteredAppointments.filter(app => app.date === selectedDate);
+                }
+                
+                if (selectedStatus !== 'all') {
+                    filteredAppointments = filteredAppointments.filter(app => app.status === selectedStatus);
+                }
+                
+                console.log('Filtered appointments:', filteredAppointments);
+                
+                // Render the appointments
+                renderAppointments(filteredAppointments);
+            })
+            .catch(error => {
+                console.error('Error fetching appointments:', error);
+                
+                // Show error message
+                if (appointmentsContainer) {
+                    appointmentsContainer.innerHTML = `<div class="error-message">Error loading appointments: ${error.message}</div>`;
+                }
+                
+                // Show a message to the user
+                showMessage('Failed to load appointments: ' + error.message, 'error');
+                
+                // Use mock data as fallback
+                useMockAppointments(status);
+            });
+    }
+    
+    // Fallback to mock data if API fails
+    function useMockAppointments(status) {
+        console.log('Using mock appointment data');
+        
+        // Mock appointments data
+        const appointments = [
+            {
+                id: 1,
+                patientName: 'John Doe',
+                patientId: 'P-001',
+                date: '2025-04-14',
+                time: '10:00 AM',
+                reason: 'Regular checkup',
+                status: 'checked-in'
+            },
+            {
+                id: 2,
+                patientName: 'Jane Smith',
+                patientId: 'P-002',
+                date: '2025-04-14',
+                time: '11:30 AM',
+                reason: 'Blood pressure monitoring',
+                status: 'waiting'
+            },
+            {
+                id: 3,
+                patientName: 'Robert Johnson',
+                patientId: 'P-003',
+                date: '2025-04-14',
+                time: '02:00 PM',
+                reason: 'Post-surgery follow-up',
+                status: 'completed'
+            },
+            {
+                id: 4,
+                patientName: 'Emily Wilson',
+                patientId: 'P-004',
+                date: '2025-04-14',
+                time: '03:30 PM',
+                reason: 'Chest pain',
+                status: 'cancelled'
+            },
+            {
+                id: 5,
+                patientName: 'Michael Brown',
+                patientId: 'P-005',
+                date: '2025-04-14',
+                time: '09:00 AM',
+                reason: 'ECG test results',
+                status: 'checked-in'
+            },
+            {
+                id: 6,
+                patientName: 'Sarah Davis',
+                patientId: 'P-006',
+                date: '2025-04-14',
+                time: '04:30 PM',
+                reason: 'Heart palpitations',
+                status: 'waiting'
+            }
+        ];
+        
+        // Filter appointments based on status and date
+        const selectedDate = dateFilter ? dateFilter.value : new Date().toISOString().split('T')[0];
+        const selectedStatus = statusFilter ? statusFilter.value : 'all';
+        
+        let filteredAppointments = appointments.filter(app => app.date === selectedDate);
+        
+        if (status !== 'all') {
+            filteredAppointments = filteredAppointments.filter(app => app.status === status);
+        }
+        
+        if (selectedStatus !== 'all') {
+            filteredAppointments = filteredAppointments.filter(app => app.status === selectedStatus);
+        }
+        
+        // Render appointments
+        renderAppointments(filteredAppointments);
+    }
+
+    function loadBeds() {
+        if (!bedGrid) {
+            console.error('Bed grid element not found in the DOM');
+            return;
+        }
+        
+        // Show loading indicator
+        bedGrid.innerHTML = '<div class="loading">Loading beds...</div>';
+        
+        // Get employee ID from localStorage
+        const employeeId = localStorage.getItem('employeeId');
+        if (!employeeId) {
+            console.error('No employee ID available for loading beds');
+            bedGrid.innerHTML = '<div class="error-message">Error: Missing employee ID</div>';
+            return;
+        }
+        
+        // Get filter values if available
+        const selectedWard = wardFilter ? wardFilter.value : 'all';
+        const selectedStatus = bedStatusFilter ? bedStatusFilter.value : 'all';
+        
+        // Log request details for debugging
+        const apiUrl = `http://localhost:8080/api/doctor/beds?employeeId=${employeeId}`;
+        console.log(`Fetching beds from: ${apiUrl} (Ward: ${selectedWard}, Status: ${selectedStatus})`);
+        
+        // Fetch beds data from API
+        fetch(apiUrl)
+            .then(response => {
+                console.log('Beds response status:', response.status, response.statusText);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch beds: ${response.status} ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(text => {
+                console.log('Raw beds response:', text);
+                if (!text || text.trim() === '') {
+                    console.warn('Empty response from beds endpoint');
+                    return { assignments: [], availableBeds: [] };
+                }
+                // Parse the response JSON
+                return JSON.parse(text);
+            })
+            .then(data => {
+                console.log('Parsed beds data:', data);
+                
+                // Process the data - get both assignments and available beds
+                let allBeds = [];
+                
+                // Process assigned beds
+                if (data.assignments && Array.isArray(data.assignments)) {
+                    console.log(`Found ${data.assignments.length} assigned beds`);
+                    allBeds = data.assignments.map(assignment => ({
+                        id: assignment.bedId,
+                        number: assignment.bedId,
+                        ward: assignment.bedType,
+                        status: 'occupied',
+                        type: assignment.bedType,
+                        patient: assignment.patientName,
+                        admissionDate: assignment.admissionDate,
+                        assignmentId: assignment.assignmentId,
+                        patientId: assignment.patientId
+                    }));
+                } else {
+                    console.warn('No assignments found in the response or invalid format');
+                }
+                
+                // Add available beds
+                if (data.availableBeds && Array.isArray(data.availableBeds)) {
+                    console.log(`Found ${data.availableBeds.length} available beds`);
+                    const availableBeds = data.availableBeds.map(bed => ({
+                        id: bed.bedId,
+                        number: bed.bedId,
+                        ward: bed.bedType,
+                        status: 'available',
+                        type: bed.bedType,
+                        description: bed.description || '',
+                        floor: bed.description ? bed.description.split(' ')[0] : 'Unknown'
+                    }));
+                    
+                    allBeds = [...allBeds, ...availableBeds];
+                } else {
+                    console.warn('No available beds found in the response or invalid format');
+                }
+                
+                console.log(`Total beds found: ${allBeds.length}`);
+                
+                // Filter beds based on ward and status
+                let filteredBeds = [...allBeds];
+                
+                if (selectedWard !== 'all') {
+                    filteredBeds = filteredBeds.filter(bed => 
+                        bed.ward.toLowerCase() === selectedWard.toLowerCase());
+                    console.log(`After ward filter (${selectedWard}): ${filteredBeds.length} beds`);
+                }
+                
+                if (selectedStatus !== 'all') {
+                    filteredBeds = filteredBeds.filter(bed => bed.status === selectedStatus);
+                    console.log(`After status filter (${selectedStatus}): ${filteredBeds.length} beds`);
+                }
+                
+                // Render beds
+                console.log('Rendering beds:', filteredBeds);
+                renderBeds(filteredBeds);
+                
+                // Update statistics
+                updateBedStatistics(allBeds);
+                
+                // Show success message
+                if (allBeds.length > 0) {
+                    showMessage(`Successfully loaded ${allBeds.length} beds`, 'success');
+                } else {
+                    showMessage('No beds found', 'info');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading beds:', error);
+                bedGrid.innerHTML = `<div class="error-message">Error loading beds: ${error.message}</div>`;
+                showMessage('Failed to load beds: ' + error.message, 'error');
+                
+                // Use mock data as fallback
+                useMockBeds();
+            });
+    }
+    
+    function updateBedStatistics(beds) {
+        if (!beds) return;
+        
+        const total = beds.length;
+        const available = beds.filter(bed => bed.status === 'available').length;
+        const occupied = beds.filter(bed => bed.status === 'occupied').length;
+        const maintenance = beds.filter(bed => bed.status === 'maintenance').length;
+        
+        document.getElementById('totalBeds').textContent = total;
+        document.getElementById('availableBeds').textContent = available;
+        document.getElementById('occupiedBeds').textContent = occupied;
+        document.getElementById('maintenanceBeds').textContent = maintenance;
+    }
+    
+    function useMockBeds() {
+        console.log('Using mock bed data');
+        // Mock beds data
+        const beds = [
+            {
+                id: 1,
+                number: '101',
+                ward: 'General Ward',
+                status: 'available',
+                type: 'Standard',
+                floor: '1st Floor'
+            },
+            {
+                id: 2,
+                number: '102',
+                ward: 'General Ward',
+                status: 'occupied',
+                type: 'Standard',
+                floor: '1st Floor',
+                patient: 'John Doe',
+                admissionDate: '2025-04-10'
+            },
+            {
+                id: 3,
+                number: '201',
+                ward: 'ICU',
+                status: 'occupied',
+                type: 'ICU',
+                floor: '2nd Floor',
+                patient: 'Emily Wilson',
+                admissionDate: '2025-04-12'
+            },
+            {
+                id: 4,
+                number: '301',
+                ward: 'Emergency',
+                status: 'available',
+                type: 'Emergency',
+                floor: '3rd Floor'
+            },
+            {
+                id: 5,
+                number: '401',
+                ward: 'Pediatric',
+                status: 'maintenance',
+                type: 'Pediatric',
+                floor: '4th Floor'
+            }
+        ];
+        
+        // Filter beds based on ward and status
+        const selectedWard = wardFilter ? wardFilter.value : 'all';
+        const selectedStatus = bedStatusFilter ? bedStatusFilter.value : 'all';
+        
+        let filteredBeds = [...beds];
+        
+        if (selectedWard !== 'all') {
+            filteredBeds = filteredBeds.filter(bed => bed.ward.toLowerCase() === selectedWard);
+        }
+        
+        if (selectedStatus !== 'all') {
+            filteredBeds = filteredBeds.filter(bed => bed.status === selectedStatus);
+        }
+        
+        // Render beds
+        renderBeds(filteredBeds);
+        updateBedStatistics(beds);
+    }
+
+    function renderAppointments(appointments) {
+        if (!appointmentsContainer) return;
+        
+        appointmentsContainer.innerHTML = '';
+        
+        if (appointments.length === 0) {
+            appointmentsContainer.innerHTML = '<div class="no-data">No appointments found</div>';
+            return;
+        }
+        
+        // Store appointments for reference
+        window.currentAppointments = appointments;
+        
+        appointments.forEach(appointment => {
+            const card = document.createElement('div');
+            card.className = 'appointment-card';
+            card.setAttribute('data-appointment-id', appointment.id);
+            card.setAttribute('data-patient-id', appointment.patientId);
+            
+            const statusClass = appointment.status.replace(' ', '-').toLowerCase();
+            
+            card.innerHTML = `
+                <div class="status-badge ${statusClass}">${capitalizeFirstLetter(appointment.status)}</div>
+                <h3>${appointment.patientName}</h3>
+                <div class="patient-info">
+                    <p><strong>Patient ID:</strong> ${appointment.patientId}</p>
+                    <p><strong>Reason:</strong> ${appointment.reason}</p>
+                </div>
+                <div class="time-info">
+                    <span><i class="fas fa-calendar"></i> ${formatDate(appointment.date)}</span>
+                    <span><i class="fas fa-clock"></i> ${appointment.time}</span>
+                </div>
+                <div class="card-actions">
+                    <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', '${appointment.status}')">
+                        <i class="fas fa-exchange-alt"></i> Update Status
+                    </button>
+                    ${appointment.status === 'completed' ? 
+                        `<button class="btn-primary" onclick="showAssignBedModal('${appointment.patientName}', '${appointment.id}')">
+                            <i class="fas fa-bed"></i> Assign Bed
+                        </button>` : ''}
+                </div>
+            `;
+            
+            appointmentsContainer.appendChild(card);
+        });
+    }
+
+    function renderBeds(beds) {
+        if (!bedGrid) return;
+        
+        bedGrid.innerHTML = '';
+        
+        if (beds.length === 0) {
+            bedGrid.innerHTML = '<div class="no-data">No beds found</div>';
+            return;
+        }
+        
+        beds.forEach(bed => {
+            const card = document.createElement('div');
+            card.className = 'bed-card';
+            
+            card.innerHTML = `
+                <div class="bed-status ${bed.status}">${capitalizeFirstLetter(bed.status)}</div>
+                <h3>Bed ${bed.number}</h3>
+                <div class="bed-details">
+                    <p><strong>Ward:</strong> ${bed.ward}</p>
+                    <p><strong>Type:</strong> ${bed.type}</p>
+                    <p><strong>Floor:</strong> ${bed.floor}</p>
+                    ${bed.status === 'occupied' ? 
+                        `<p><strong>Patient:</strong> ${bed.patient}</p>
+                        <p><strong>Admitted:</strong> ${formatDate(bed.admissionDate)}</p>` : ''}
+                </div>
+                ${bed.status === 'occupied' ? 
+                    `<div class="bed-actions">
+                        <button class="btn-secondary">
+                            <i class="fas fa-file-medical"></i> View Details
+                        </button>
+                    </div>` : ''}
+            `;
+            
+            bedGrid.appendChild(card);
+        });
+    }
+
+    // Helper functions
+    function capitalizeFirstLetter(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
+    
+    function formatDate(dateString) {
+        const options = { year: 'numeric', month: 'short', day: 'numeric' };
+        return new Date(dateString).toLocaleDateString(undefined, options);
+    }
+
+    // Handle logout
+    function handleLogout() {
+        console.log('Handling logout - clearing localStorage items');
+        // Clear all relevant localStorage items
+        localStorage.removeItem('userData');
+        localStorage.removeItem('employeeId');
+        // Redirect to login page
+        window.location.href = 'simple_login.html';
+    }
+
+    // Close modals when clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            closeModal(e.target);
+        }
+    });
+
+    // Close modals when clicking close button
+    document.querySelectorAll('.close').forEach(closeBtn => {
+        closeBtn.addEventListener('click', () => {
+            closeModal(closeBtn.closest('.modal'));
+        });
+    });
+
+    // Make functions available globally
+    window.updateAppointmentStatus = updateAppointmentStatus;
+    window.showAssignBedModal = showAssignBedModal;
+    window.closeModal = closeModal;
+    window.refreshAppointments = function() {
+        loadAppointments(getActiveAppointmentStatus());
     };
+
+    // Check the DOM elements - create placeholders if not found for testing
+    if (!appointmentsContainer) {
+        console.warn('Appointments container element not found in the DOM - creating temporary element for debugging');
+        appointmentsContainer = document.createElement('div');
+        appointmentsContainer.id = 'appointmentsContainer';
+        document.body.appendChild(appointmentsContainer);
+    }
+    
+    if (!bedGrid) {
+        console.warn('Bed grid element not found in the DOM - creating temporary element for debugging');
+        bedGrid = document.createElement('div');
+        bedGrid.id = 'bedGrid';
+        document.body.appendChild(bedGrid);
+    }
 }); 
+
+// Function to refresh appointments (accessible globally)
+function refreshAppointments() {
+    const activeTab = document.querySelector('.tab-btn.active');
+    const status = activeTab ? activeTab.getAttribute('data-status') : 'checked-in';
+    loadAppointments(status);
+}
