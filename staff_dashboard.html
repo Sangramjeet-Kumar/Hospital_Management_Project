@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Dashboard - Hospital Management</title>
+    <title>Staff Dashboard - PulsePoint</title>
     <link rel="stylesheet" href="staff_dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -20,7 +20,7 @@
                     <i class="fas fa-user-plus"></i> Patient Management
                 </li>
                 <li data-tab="bed-status">
-                    <i class="fas fa-bed"></i> Bed & Room Status
+                    <i class="fas fa-bed"></i> Bed Management
                 </li>
                 <li data-tab="appointments">
                     <i class="fas fa-calendar-check"></i> Appointments
@@ -42,70 +42,113 @@
                     <button class="btn-primary" onclick="showPatientRegistrationModal()">
                         <i class="fas fa-plus"></i> New Patient Registration
                     </button>
+                    <button class="btn-primary" onclick="showCheckInModal()">
+                        <i class="fas fa-clipboard-check"></i> Check-in Appointment
+                    </button>
+                    <button class="btn-emergency" onclick="showEmergencyPatientModal()">
+                        <i class="fas fa-ambulance"></i> Emergency Patient
+                    </button>
                 </div>
-                <div class="search-box">
-                    <input type="text" id="patientSearch" placeholder="Search patients...">
+                <div class="search-filter-container">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="patientSearch" placeholder="Search patients...">
+                    </div>
+                    <div class="filter-box">
+                        <select id="patientStatusFilter">
+                            <option value="all">All Patients</option>
+                            <option value="active">Active</option>
+                            <option value="discharged">Discharged</option>
+                            <option value="admitted">Admitted</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="patients-list" id="patientsList">
                     <!-- Patient cards will be populated here -->
                 </div>
             </section>
 
-            <!-- Bed & Room Status Section -->
-            <section id="bed-status" class="tab-content">
-                <h2>Bed & Room Status</h2>
-                <div class="status-controls">
-                    <div class="filters">
-                        <select id="wardFilter">
-                            <option value="all">All Wards</option>
-                            <option value="general">General Ward</option>
-                            <option value="emergency">Emergency</option>
-                            <option value="icu">ICU</option>
-                            <option value="pediatric">Pediatric</option>
-                        </select>
-                        <select id="statusFilter">
-                            <option value="all">All Status</option>
-                            <option value="available">Available</option>
-                            <option value="occupied">Occupied</option>
-                            <option value="maintenance">Maintenance</option>
-                        </select>
+            <!-- Bed Management Tab -->
+            <div id="bed-status" class="tab-content">
+                <div class="bed-management">
+                    <div class="bed-management-header">
+                        <h2 class="bed-management-title">Bed Management</h2>
+                        <div class="bed-management-filters">
+                            <select id="wardFilter">
+                                <option value="all">All Wards</option>
+                                <option value="general">General Ward</option>
+                                <option value="icu">ICU</option>
+                                <option value="emergency">Emergency</option>
+                                <option value="pediatric">Pediatric</option>
+                            </select>
+                            <select id="statusFilter">
+                                <option value="all">All Status</option>
+                                <option value="available">Available</option>
+                                <option value="occupied">Occupied</option>
+                                <option value="maintenance">Maintenance</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="bed-action-buttons">
-                        <button class="btn-emergency" onclick="showEmergencyAllotmentModal()">
+
+                    <div class="bed-management-actions">
+                        <button onclick="showBedAllocationModal()" class="allocate-bed">
+                            <i class="fas fa-bed"></i> Allocate Bed
+                        </button>
+                        <button onclick="showEmergencyAllotmentModal()" class="emergency-allotment">
                             <i class="fas fa-ambulance"></i> Emergency Allotment
                         </button>
-                        <button class="btn-primary" onclick="showDischargeModal()">
+                        <button onclick="showDischargeModal()" class="process-discharge">
                             <i class="fas fa-sign-out-alt"></i> Process Discharge
                         </button>
-                        <button class="btn-primary" onclick="showTransferModal()">
+                        <button onclick="showTransferModal()" class="transfer-patient">
                             <i class="fas fa-exchange-alt"></i> Transfer Patient
                         </button>
                     </div>
-                </div>
-                <div class="bed-overview">
-                    <div class="stats-cards">
-                        <div class="stat-card">
-                            <h3>Total Beds</h3>
-                            <p id="totalBeds">100</p>
+
+                    <div class="bed-stats">
+                        <div class="stat-card total">
+                            <div class="icon">
+                                <i class="fas fa-bed"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="totalBeds">0</h3>
+                                <p>Total Beds</p>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <h3>Available</h3>
-                            <p id="availableBeds">45</p>
+                        <div class="stat-card available">
+                            <div class="icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="availableBeds">0</h3>
+                                <p>Available</p>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <h3>Occupied</h3>
-                            <p id="occupiedBeds">50</p>
+                        <div class="stat-card occupied">
+                            <div class="icon">
+                                <i class="fas fa-procedures"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="occupiedBeds">0</h3>
+                                <p>Occupied</p>
+                            </div>
                         </div>
-                        <div class="stat-card">
-                            <h3>Maintenance</h3>
-                            <p id="maintenanceBeds">5</p>
+                        <div class="stat-card maintenance">
+                            <div class="icon">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="maintenanceBeds">0</h3>
+                                <p>Maintenance</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="bed-grid" id="bedGrid">
-                        <!-- Bed cards will be populated here -->
+
+                    <div id="bedGrid" class="bed-grid">
+                        <!-- Bed cards will be dynamically added here -->
                     </div>
                 </div>
-            </section>
+            </div>
 
             <!-- Appointments Section -->
             <section id="appointments" class="tab-content">
@@ -118,11 +161,28 @@
                         <select id="departmentFilter">
                             <option value="all">All Departments</option>
                         </select>
+                        <select id="appointmentStatusFilter">
+                            <option value="all">All Status</option>
+                            <option value="scheduled">Scheduled</option>
+                            <option value="waiting">Waiting</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
                         <input type="date" id="dateFilter">
                     </div>
+                    <div class="action-buttons">
+                        <button class="btn-primary" onclick="showNewAppointmentModal()">
+                            <i class="fas fa-plus"></i> New Appointment
+                        </button>
+                        <button class="btn-primary" onclick="refreshAppointments()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
                 </div>
-                <div class="appointments-grid" id="appointmentsGrid">
-                    <!-- Appointment cards will be populated here -->
+                <div class="appointments-container">
+                    <div class="appointments-grid" id="appointmentsGrid">
+                        <!-- Appointment cards will be populated here -->
+                    </div>
                 </div>
             </section>
 
@@ -130,33 +190,58 @@
             <section id="profile" class="tab-content">
                 <h2>Profile Settings</h2>
                 <div class="profile-container">
-                    <form id="profileForm" class="profile-form">
-                        <div class="form-group">
-                            <label>Full Name</label>
-                            <input type="text" id="fullName" name="fullName" readonly>
+                    <div class="profile-card">
+                        <div class="profile-header">
+                            <img src="staff.png" alt="Staff Profile" class="profile-img-large">
+                            <h3 id="profileName">Staff Name</h3>
+                            <p id="profileRole">Staff Role</p>
                         </div>
-                        <div class="form-group">
-                            <label>Employee ID</label>
-                            <input type="text" id="employeeId" name="employeeId" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Email</label>
-                            <input type="email" id="email" name="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Contact Number</label>
-                            <input type="tel" id="phone" name="phone" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Department</label>
-                            <input type="text" id="department" name="department" readonly>
-                        </div>
-                        <div class="form-group">
-                            <label>Role</label>
-                            <input type="text" id="role" name="role" readonly>
-                        </div>
-                        <button type="submit" class="btn-primary">Update Contact Details</button>
-                    </form>
+                        <form id="profileForm" class="profile-form">
+                            <div class="form-group">
+                                <label>Full Name</label>
+                                <input type="text" id="fullName" name="fullName" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Employee ID</label>
+                                <input type="text" id="employeeId" name="employeeId" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="email" name="email" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Contact Number</label>
+                                <input type="tel" id="phone" name="phone" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Department</label>
+                                <input type="text" id="department" name="department" readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>Role</label>
+                                <input type="text" id="role" name="role" readonly>
+                            </div>
+                            <button type="submit" class="btn-primary">Update Contact Details</button>
+                        </form>
+                    </div>
+                    <div class="change-password-card">
+                        <h3>Change Password</h3>
+                        <form id="changePasswordForm" class="password-form">
+                            <div class="form-group">
+                                <label>Current Password</label>
+                                <input type="password" id="currentPassword" name="currentPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label>New Password</label>
+                                <input type="password" id="newPassword" name="newPassword" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Confirm New Password</label>
+                                <input type="password" id="confirmPassword" name="confirmPassword" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Change Password</button>
+                        </form>
+                    </div>
                 </div>
             </section>
         </main>
@@ -169,12 +254,8 @@
             <h2>New Patient Registration</h2>
             <form id="patientRegistrationForm">
                 <div class="form-group">
-                    <label>Patient Name</label>
-                    <input type="text" name="patientName" required>
-                </div>
-                <div class="form-group">
-                    <label>Age</label>
-                    <input type="number" name="age" required>
+                    <label>Full Name</label>
+                    <input type="text" name="fullName" required>
                 </div>
                 <div class="form-group">
                     <label>Gender</label>
@@ -187,11 +268,125 @@
                 </div>
                 <div class="form-group">
                     <label>Contact Number</label>
-                    <input type="tel" name="contact" required>
+                    <input type="tel" name="contactNumber" required>
                 </div>
                 <div class="form-group">
-                    <label>Ward/Department</label>
-                    <select name="ward" required>
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea name="address" required></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>City</label>
+                        <input type="text" name="city" required>
+                    </div>
+                    <div class="form-group half">
+                        <label>State</label>
+                        <input type="text" name="state" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Pin Code</label>
+                    <input type="text" name="pinCode" required>
+                </div>
+                <div class="form-group">
+                    <label>Adhar Number</label>
+                    <input type="text" name="adhar">
+                </div>
+                <button type="submit" class="btn-primary">Register Patient</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Check-in Appointment Modal -->
+    <div id="checkInModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Check-in Appointment</h2>
+            <div class="search-box modal-search">
+                <i class="fas fa-search"></i>
+                <input type="text" id="appointmentSearchInput" placeholder="Search by patient name or appointment ID...">
+            </div>
+            <div class="appointments-list" id="checkInAppointmentsList">
+                <!-- Appointments will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Patient Modal -->
+    <div id="emergencyPatientModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Emergency Patient Registration</h2>
+            <form id="emergencyPatientForm">
+                <div class="form-group">
+                    <label>Patient Name</label>
+                    <input type="text" name="patientName" required>
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select name="gender" required>
+                        <option value="">Select Gender</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Contact Number (if available)</label>
+                    <input type="tel" name="contactNumber">
+                </div>
+                <div class="form-group">
+                    <label>Emergency Type</label>
+                    <select name="emergencyType" required>
+                        <option value="">Select Emergency Type</option>
+                        <option value="trauma">Trauma</option>
+                        <option value="cardiac">Cardiac</option>
+                        <option value="respiratory">Respiratory</option>
+                        <option value="neurological">Neurological</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Brief Description</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Assign Doctor</label>
+                    <select name="doctorId" id="emergencyDoctorSelect" required>
+                        <option value="">Select Doctor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Allocate Bed</label>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="allocateBed" name="allocateBed" checked>
+                        <label for="allocateBed">Immediately allocate a bed</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn-emergency">Register & Admit Emergency Patient</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bed Allocation Modal -->
+    <div id="bedAllocationModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Allocate Bed to Patient</h2>
+            <form id="bedAllocationForm">
+                <div class="form-group">
+                    <label>Patient</label>
+                    <select name="patientId" id="bedAllocationPatientSelect" required>
+                        <option value="">Select Patient</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ward</label>
+                    <select name="ward" id="bedAllocationWardSelect" required>
                         <option value="">Select Ward</option>
                         <option value="general">General Ward</option>
                         <option value="emergency">Emergency</option>
@@ -201,17 +396,76 @@
                 </div>
                 <div class="form-group">
                     <label>Bed Number</label>
-                    <select name="bedNumber" id="availableBedSelect" required>
-                        <!-- Available beds will be populated here -->
+                    <select name="bedId" id="bedAllocationBedSelect" required>
+                        <option value="">Select Bed</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Doctor</label>
-                    <select name="doctor" required>
-                        <!-- Doctors will be populated here -->
+                    <select name="doctorId" id="bedAllocationDoctorSelect" required>
+                        <option value="">Select Doctor</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary">Register Patient</button>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea name="notes"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Allocate Bed</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Emergency Bed Allotment Modal -->
+    <div id="emergencyAllotmentModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Emergency Bed Allotment</h2>
+            <form id="emergencyAllotmentForm">
+                <div class="form-group">
+                    <label>Patient</label>
+                    <select name="patientId" id="emergencyAllotmentPatientSelect" required>
+                        <option value="">Select Patient</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Emergency Type</label>
+                    <select name="emergencyType" required>
+                        <option value="">Select Emergency Type</option>
+                        <option value="trauma">Trauma</option>
+                        <option value="cardiac">Cardiac</option>
+                        <option value="respiratory">Respiratory</option>
+                        <option value="neurological">Neurological</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Doctor</label>
+                    <select name="doctorId" id="emergencyAllotmentDoctorSelect" required>
+                        <option value="">Select Doctor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea name="notes" required></textarea>
+                </div>
+                <div class="form-group">
+                    <div class="priority-label">Priority</div>
+                    <div class="priority-selector">
+                        <label class="priority-option">
+                            <input type="radio" name="priority" value="high" checked>
+                            <span class="priority-badge high">High</span>
+                        </label>
+                        <label class="priority-option">
+                            <input type="radio" name="priority" value="medium">
+                            <span class="priority-badge medium">Medium</span>
+                        </label>
+                        <label class="priority-option">
+                            <input type="radio" name="priority" value="low">
+                            <span class="priority-badge low">Low</span>
+                        </label>
+                    </div>
+                </div>
+                <button type="submit" class="btn-emergency">Allocate Emergency Bed</button>
             </form>
         </div>
     </div>
@@ -223,18 +477,22 @@
             <h2>Process Discharge</h2>
             <form id="dischargeForm">
                 <div class="form-group">
-                    <label>Patient ID</label>
-                    <select name="patientId" required>
-                        <!-- Admitted patients will be populated here -->
+                    <label>Patient</label>
+                    <select name="patientId" id="dischargePatientSelect" required>
+                        <option value="">Select Patient</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Discharge Date</label>
-                    <input type="datetime-local" name="dischargeDate" required>
+                    <label>Bed Number</label>
+                    <input type="text" id="dischargeBedNumber" readonly>
                 </div>
                 <div class="form-group">
                     <label>Discharge Notes</label>
-                    <textarea name="dischargeNotes" required></textarea>
+                    <textarea name="notes" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Discharge Date</label>
+                    <input type="date" name="dischargeDate" required>
                 </div>
                 <button type="submit" class="btn-primary">Process Discharge</button>
             </form>
@@ -249,18 +507,18 @@
             <form id="transferForm">
                 <div class="form-group">
                     <label>Patient</label>
-                    <select name="patientId" required>
-                        <!-- Admitted patients will be populated here -->
+                    <select name="patientId" id="transferPatientSelect" required>
+                        <option value="">Select Patient</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Current Department</label>
-                    <input type="text" id="currentDepartment" disabled>
+                    <label>Current Bed</label>
+                    <input type="text" id="currentBedNumber" readonly>
                 </div>
                 <div class="form-group">
-                    <label>New Department</label>
-                    <select name="newDepartment" required>
-                        <option value="">Select Department</option>
+                    <label>Transfer To Ward</label>
+                    <select name="toWard" id="transferWardSelect" required>
+                        <option value="">Select Ward</option>
                         <option value="general">General Ward</option>
                         <option value="emergency">Emergency</option>
                         <option value="icu">ICU</option>
@@ -269,50 +527,67 @@
                 </div>
                 <div class="form-group">
                     <label>New Bed</label>
-                    <select name="newBed" id="transferBedSelect" required>
-                        <!-- Available beds will be populated here -->
+                    <select name="toBedId" id="transferBedSelect" required>
+                        <option value="">Select Bed</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Reason for Transfer</label>
-                    <textarea name="transferReason" required></textarea>
+                    <textarea name="reason" required></textarea>
                 </div>
-                <button type="submit" class="btn-primary">Process Transfer</button>
+                <button type="submit" class="btn-primary">Transfer Patient</button>
             </form>
         </div>
     </div>
 
-    <!-- Emergency Allotment Modal -->
-    <div id="emergencyAllotmentModal" class="modal">
+    <!-- New Appointment Modal -->
+    <div id="newAppointmentModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <h2>Emergency Bed Allotment</h2>
-            <form id="emergencyAllotmentForm">
+            <h2>Schedule New Appointment</h2>
+            <form id="newAppointmentForm">
                 <div class="form-group">
-                    <label>Patient Name</label>
-                    <input type="text" name="patientName" required>
-                </div>
-                <div class="form-group">
-                    <label>Emergency Type</label>
-                    <select name="emergencyType" required>
-                        <option value="">Select Emergency Type</option>
-                        <option value="trauma">Trauma</option>
-                        <option value="cardiac">Cardiac</option>
-                        <option value="respiratory">Respiratory</option>
-                        <option value="other">Other</option>
+                    <label>Patient</label>
+                    <select name="patientId" id="appointmentPatientSelect" required>
+                        <option value="">Select Patient</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Available Emergency Beds</label>
-                    <select name="emergencyBed" id="emergencyBedSelect" required>
-                        <!-- Emergency beds will be populated here -->
+                    <label>Doctor</label>
+                    <select name="doctorId" id="appointmentDoctorSelect" required>
+                        <option value="">Select Doctor</option>
                     </select>
                 </div>
-                <button type="submit" class="btn-primary">Allocate Emergency Bed</button>
+                <div class="form-group">
+                    <label>Department</label>
+                    <select name="department" id="appointmentDepartmentSelect" required>
+                        <option value="">Select Department</option>
+                        <option value="Cardiology">Cardiology</option>
+                        <option value="Neurology">Neurology</option>
+                        <option value="Orthopedics">Orthopedics</option>
+                        <option value="Pediatrics">Pediatrics</option>
+                        <option value="Ophthalmology">Ophthalmology</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Date</label>
+                        <input type="date" name="appointmentDate" required>
+                    </div>
+                    <div class="form-group half">
+                        <label>Time</label>
+                        <input type="time" name="appointmentTime" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" required></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Schedule Appointment</button>
             </form>
         </div>
     </div>
 
     <script src="staff_dashboard.js"></script>
 </body>
-</html> 
+</html>
