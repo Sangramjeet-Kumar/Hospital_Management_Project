@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"hospital-management/backend/internal/database"
 	"log"
@@ -8,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/gorilla/mux"
 )
 
 // StaffStats represents dashboard statistics for staff members
@@ -101,18 +100,37 @@ func GetStaffStats(w http.ResponseWriter, r *http.Request) {
 
 // GetStaffProfile returns the profile information for a staff member
 func GetStaffProfile(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	// Set CORS headers
 	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 
-	vars := mux.Vars(r)
-	staffIDStr := vars["id"]
-
-	staffID, err := strconv.Atoi(staffIDStr)
-	if err != nil {
-		log.Printf("Invalid staff ID: %v", err)
-		sendJSONError(w, "Invalid staff ID", http.StatusBadRequest)
+	// Handle preflight request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		log.Println("OPTIONS request for staff profile handled")
 		return
 	}
+	
+	log.Printf("GetStaffProfile called with query params: %v", r.URL.Query())
+	
+	// Get employee ID from the query parameter
+	employeeIDStr := r.URL.Query().Get("employeeId")
+	if employeeIDStr == "" {
+		log.Println("Missing employeeId parameter")
+		http.Error(w, "EmployeeID is required", http.StatusBadRequest)
+		return
+	}
+
+	employeeID, err := strconv.Atoi(employeeIDStr)
+	if err != nil {
+		log.Printf("Invalid employeeId format: %s - %v", employeeIDStr, err)
+		http.Error(w, "Invalid EmployeeID format", http.StatusBadRequest)
+		return
+	}
+
+	log.Printf("Fetching staff profile for employeeID: %d", employeeID)
 
 	var profile StaffProfile
 	err = database.DB.QueryRow(`
@@ -130,7 +148,7 @@ func GetStaffProfile(w http.ResponseWriter, r *http.Request) {
 			HospitalStaff s ON e.EmployeeID = s.EmployeeID
 		WHERE 
 			e.EmployeeID = ? AND e.Role = 'staff'
-	`, staffID).Scan(
+	`, employeeID).Scan(
 		&profile.EmployeeID,
 		&profile.FullName,
 		&profile.Email,
@@ -146,28 +164,46 @@ func GetStaffProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Log the response
+	responseBytes, err := json.Marshal(profile)
+	if err != nil {
+		log.Printf("Error marshalling profile: %v", err)
+	} else {
+		log.Printf("Staff profile response: %s", string(responseBytes))
+	}
+	
 	json.NewEncoder(w).Encode(profile)
 }
 
 // UpdateStaffProfile updates the contact information for a staff member
 func UpdateStaffProfile(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	// Set CORS headers
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "PUT, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, PUT, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
 
-	if r.Method == "OPTIONS" {
+	// Handle preflight request
+	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
+		log.Println("OPTIONS request for update staff profile handled")
+		return
+	}
+	
+	log.Printf("UpdateStaffProfile called with query params: %v, method: %s", r.URL.Query(), r.Method)
+
+	// Get employee ID from the query parameter
+	employeeIDStr := r.URL.Query().Get("employeeId")
+	if employeeIDStr == "" {
+		log.Println("Missing employeeId parameter")
+		http.Error(w, "EmployeeID is required", http.StatusBadRequest)
 		return
 	}
 
-	vars := mux.Vars(r)
-	staffIDStr := vars["id"]
-
-	staffID, err := strconv.Atoi(staffIDStr)
+	employeeID, err := strconv.Atoi(employeeIDStr)
 	if err != nil {
-		log.Printf("Invalid staff ID: %v", err)
-		sendJSONError(w, "Invalid staff ID", http.StatusBadRequest)
+		log.Printf("Invalid employeeId format: %s - %v", employeeIDStr, err)
+		http.Error(w, "Invalid EmployeeID format", http.StatusBadRequest)
 		return
 	}
 
@@ -181,12 +217,15 @@ func UpdateStaffProfile(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, "Invalid request format", http.StatusBadRequest)
 		return
 	}
+	
+	log.Printf("Updating profile for employeeID: %d with data: %+v", employeeID, updateReq)
 
+	// Update the employee record
 	_, err = database.DB.Exec(`
 		UPDATE Employees
 		SET Email = ?, ContactNumber = ?
-		WHERE EmployeeID = ?
-	`, updateReq.Email, updateReq.ContactNumber, staffID)
+		WHERE EmployeeID = ? AND Role = 'staff'
+	`, updateReq.Email, updateReq.ContactNumber, employeeID)
 
 	if err != nil {
 		log.Printf("Error updating staff profile: %v", err)
@@ -194,8 +233,16 @@ func UpdateStaffProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Staff profile updated successfully",
+	}
+	
+	// Log and send the response
+	responseBytes, _ := json.Marshal(response)
+	log.Printf("Update response: %s", string(responseBytes))
+	
+	json.NewEncoder(w).Encode(response)
 }
 
 // GetStaffPatients returns the list of patients for staff view
@@ -203,18 +250,14 @@ func GetStaffPatients(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// First, get all patients
+	// Use the exact query specified in requirements
 	rows, err := database.DB.Query(`
-		SELECT 
-			p.PatientID,
-			p.FullName,
-			p.Gender,
-			p.ContactNumber,
-			p.Email
-		FROM 
-			Patients p
-		ORDER BY 
-			p.PatientID DESC
+		SELECT p.PatientID, p.FullName, p.Email, p.ContactNumber, a.AppointmentID, a.Status, ba.BedID
+		FROM patients p
+		LEFT JOIN appointment a ON p.PatientID = a.PatientID
+		LEFT JOIN bedassignments ba ON p.PatientID = ba.PatientID
+		WHERE (ba.DischargeDate IS NULL OR ba.DischargeDate IS NOT NULL)
+		ORDER BY p.PatientID DESC
 	`)
 
 	if err != nil {
@@ -224,15 +267,21 @@ func GetStaffPatients(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	var patients []PatientData
+	var patients []map[string]interface{}
 	for rows.Next() {
-		var patient PatientData
+		var patientID int
+		var fullName, email, contactNumber string
+		var appointmentID, bedID sql.NullInt64
+		var status sql.NullString
+
 		err := rows.Scan(
-			&patient.ID,
-			&patient.Name,
-			&patient.Gender,
-			&patient.Contact,
-			&patient.Email,
+			&patientID,
+			&fullName,
+			&email,
+			&contactNumber,
+			&appointmentID,
+			&status,
+			&bedID,
 		)
 
 		if err != nil {
@@ -240,9 +289,32 @@ func GetStaffPatients(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// Default values
-		patient.Status = "new"
-		patient.Bed = 0
+		patient := map[string]interface{}{
+			"id":           patientID,
+			"name":         fullName,
+			"email":        email,
+			"contact":      contactNumber,
+			"appointmentID": nil,
+			"status":       "new",
+			"bedID":        nil,
+		}
+
+		// Set appointment info if exists
+		if appointmentID.Valid {
+			patient["appointmentID"] = appointmentID.Int64
+			if status.Valid {
+				patient["status"] = status.String
+			} else {
+				patient["status"] = "scheduled"
+			}
+		}
+
+		// Set bed info if exists
+		if bedID.Valid {
+			patient["bedID"] = bedID.Int64
+			// If patient has a bed, they're admitted
+			patient["status"] = "admitted"
+		}
 
 		patients = append(patients, patient)
 	}
@@ -253,112 +325,134 @@ func GetStaffPatients(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get bed assignments (for admitted patients)
-	bedRows, err := database.DB.Query(`
-		SELECT 
-			ba.PatientID,
-			ba.BedID,
-			ba.AdmissionDate
-		FROM 
-			BedAssignments ba
-		WHERE 
-			ba.DischargeDate IS NULL
-	`)
+	json.NewEncoder(w).Encode(patients)
+}
+
+// RegisterPatient handles new patient registration
+func RegisterPatient(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		log.Println("OPTIONS request for register patient handled")
+		return
+	}
+
+	// Parse the request body
+	var patient struct {
+		FullName      string `json:"fullName"`
+		ContactNumber string `json:"contactNumber"`
+		Email         string `json:"email"`
+		Address       string `json:"address"`
+		City          string `json:"city"`
+		State         string `json:"state"`
+		PinCode       string `json:"pinCode"`
+		Gender        string `json:"gender"`
+		Adhar         string `json:"adhar"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&patient); err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		sendJSONError(w, "Invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	// Validate required fields
+	if patient.FullName == "" || patient.ContactNumber == "" || patient.Email == "" || patient.Gender == "" {
+		log.Printf("Missing required fields for patient registration")
+		sendJSONError(w, "Missing required fields: fullName, contactNumber, email, gender", http.StatusBadRequest)
+		return
+	}
+
+	// Insert patient into database
+	result, err := database.DB.Exec(`
+		INSERT INTO Patients 
+		(FullName, ContactNumber, Email, Address, City, State, PinCode, Gender, Adhar) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, 
+	patient.FullName, patient.ContactNumber, patient.Email, patient.Address, 
+	patient.City, patient.State, patient.PinCode, patient.Gender, patient.Adhar)
 
 	if err != nil {
-		log.Printf("Error querying bed assignments: %v", err)
+		log.Printf("Error inserting patient: %v", err)
 		sendJSONError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
-	defer bedRows.Close()
 
-	// Create a map for quick patient lookup
-	patientMap := make(map[int]*PatientData)
-	for i := range patients {
-		patientMap[patients[i].ID] = &patients[i]
+	// Get the ID of the newly inserted patient
+	patientID, err := result.LastInsertId()
+	if err != nil {
+		log.Printf("Error getting last insert ID: %v", err)
 	}
 
-	// Update admitted patients with bed info
-	for bedRows.Next() {
-		var patientID, bedID int
-		var admissionDate string
-
-		err := bedRows.Scan(&patientID, &bedID, &admissionDate)
-		if err != nil {
-			log.Printf("Error scanning bed row: %v", err)
-			continue
-		}
-
-		if patient, exists := patientMap[patientID]; exists {
-			patient.Status = "admitted"
-			patient.Bed = bedID
-			patient.AdmissionDate = admissionDate
-		}
+	response := map[string]interface{}{
+		"success":   true,
+		"message":   "Patient registered successfully",
+		"patientID": patientID,
 	}
 
-	// Get doctor assignments (for patients with appointments)
-	apptRows, err := database.DB.Query(`
-		SELECT DISTINCT
-			a.PatientID,
-			d.FullName as DoctorName
-		FROM 
-			Appointment a
-		JOIN 
-			Doctors d ON a.DoctorID = d.DoctorID
-	`)
+	log.Printf("Patient registered successfully: ID=%d, Name=%s", patientID, patient.FullName)
+	json.NewEncoder(w).Encode(response)
+}
+
+// CheckInPatient handles patient appointment check-in
+func CheckInPatient(w http.ResponseWriter, r *http.Request) {
+	// Set CORS headers
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Handle preflight request
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		log.Println("OPTIONS request for check-in patient handled")
+		return
+	}
+
+	// Parse the request body
+	var checkIn struct {
+		AppointmentID int `json:"appointmentId"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&checkIn); err != nil {
+		log.Printf("Error decoding request body: %v", err)
+		sendJSONError(w, "Invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	// Validate appointment ID
+	if checkIn.AppointmentID <= 0 {
+		log.Printf("Invalid appointment ID: %d", checkIn.AppointmentID)
+		sendJSONError(w, "Invalid appointment ID", http.StatusBadRequest)
+		return
+	}
+
+	// Update appointment status to 'Checked-In'
+	_, err := database.DB.Exec(`
+		UPDATE Appointment 
+		SET Status = 'checked-in' 
+		WHERE AppointmentID = ?
+	`, checkIn.AppointmentID)
 
 	if err != nil {
-		log.Printf("Error querying doctor assignments: %v", err)
+		log.Printf("Error updating appointment status: %v", err)
 		sendJSONError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
-	defer apptRows.Close()
 
-	// Update patients with doctor info and registered status
-	for apptRows.Next() {
-		var patientID int
-		var doctorName string
-
-		err := apptRows.Scan(&patientID, &doctorName)
-		if err != nil {
-			log.Printf("Error scanning appointment row: %v", err)
-			continue
-		}
-
-		if patient, exists := patientMap[patientID]; exists {
-			patient.Doctor = doctorName
-			// Only update status if patient is not already admitted
-			if patient.Status != "admitted" {
-				patient.Status = "registered"
-			}
-		}
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Patient checked in successfully",
 	}
 
-	// Sort patients: admitted first, then registered, then new
-	sortedPatients := make([]PatientData, 0, len(patients))
-
-	// First add admitted patients
-	for _, p := range patients {
-		if p.Status == "admitted" {
-			sortedPatients = append(sortedPatients, p)
-		}
-	}
-
-	// Then add registered patients
-	for _, p := range patients {
-		if p.Status == "registered" {
-			sortedPatients = append(sortedPatients, p)
-		}
-	}
-
-	// Finally add new patients
-	for _, p := range patients {
-		if p.Status == "new" {
-			sortedPatients = append(sortedPatients, p)
-		}
-	}
-
-	json.NewEncoder(w).Encode(sortedPatients)
+	log.Printf("Patient checked in successfully for appointment ID: %d", checkIn.AppointmentID)
+	json.NewEncoder(w).Encode(response)
 }
 
 // GetBedStatus returns the current bed status information

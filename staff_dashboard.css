@@ -330,22 +330,59 @@ section h2::after {
 
 .patient-card {
     background: white;
+    border-radius: 10px;
     padding: 20px;
-    border-radius: 15px;
-    box-shadow: var(--card-shadow);
-    transition: all 0.3s ease;
+    margin-bottom: 15px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s;
     position: relative;
 }
 
 .patient-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--hover-shadow);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
 }
 
 .patient-card h3 {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
+    margin-top: 0;
     color: var(--text-color);
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+}
+
+.status-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+.status-badge.admitted {
+    background-color: #e6f7ff;
+    color: #0072b5;
+    border: 1px solid #b3e0ff;
+}
+
+.status-badge.checked-in {
+    background-color: #e6f4ea;
+    color: #137333;
+    border: 1px solid #b7dfca;
+}
+
+.status-badge.scheduled {
+    background-color: #fff8e6;
+    color: #f59e0b;
+    border: 1px solid #fde68a;
+}
+
+.status-badge.new {
+    background-color: #f0f0f0;
+    color: #666;
+    border: 1px solid #ddd;
 }
 
 .patient-info {
@@ -745,123 +782,197 @@ button.transfer-patient {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
+    margin-top: 20px;
 }
 
 .appointment-card {
-    background: white;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
     padding: 20px;
-    border-radius: 15px;
-    box-shadow: var(--card-shadow);
-    transition: all 0.3s ease;
     position: relative;
+    transition: all 0.3s ease;
     overflow: hidden;
+    border-left: 4px solid var(--primary-color);
 }
 
 .appointment-card:hover {
     transform: translateY(-5px);
-    box-shadow: var(--hover-shadow);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
-.appointment-status {
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 5px 10px;
-    color: white;
-    font-size: 0.8rem;
-    font-weight: bold;
-    border-bottom-left-radius: 10px;
+.appointment-card.scheduled {
+    border-left-color: var(--primary-color);
 }
 
-.status-scheduled {
-    background-color: var(--primary-color);
+.appointment-card.waiting {
+    border-left-color: var(--warning-color);
 }
 
-.status-waiting {
-    background-color: var(--warning-color);
+.appointment-card.completed {
+    border-left-color: var(--success-color);
 }
 
-.status-completed {
-    background-color: var(--success-color);
+.appointment-card.cancelled {
+    border-left-color: #9ca3af;
 }
 
-.status-cancelled {
-    background-color: #9ca3af;
-}
-
-.appointment-card h3 {
-    font-size: 1.2rem;
-    margin-bottom: 10px;
+.appointment-time {
+    font-size: 1.4rem;
+    font-weight: 700;
     color: var(--text-color);
-    padding-right: 70px;
+    margin-bottom: 4px;
 }
 
-.appointment-info {
+.appointment-date {
+    font-size: 1rem;
+    color: #6b7280;
     margin-bottom: 15px;
 }
 
-.appointment-info p {
-    margin: 5px 0;
-    display: flex;
-    align-items: center;
-    font-size: 0.95rem;
+.appointment-status-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: capitalize;
 }
 
-.appointment-info i {
+.appointment-status-badge.scheduled {
+    background-color: #e0f2fe;
+    color: var(--primary-color);
+}
+
+.appointment-status-badge.waiting {
+    background-color: #fff7ed;
+    color: var(--warning-color);
+}
+
+.appointment-status-badge.completed {
+    background-color: #ecfdf5;
+    color: var(--success-color);
+}
+
+.appointment-status-badge.cancelled {
+    background-color: #f3f4f6;
+    color: #6b7280;
+}
+
+.appointment-details {
+    margin-bottom: 15px;
+}
+
+.appointment-details > div {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.appointment-details i {
     width: 20px;
     margin-right: 10px;
     color: var(--primary-color);
 }
 
+.patient-info, .doctor-info {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.department-info, .contact-info, .description-info {
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
 .appointment-actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     margin-top: 15px;
+    justify-content: flex-end;
+}
+
+.action-button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+
+.action-button.view {
+    background-color: #e0f2fe;
+    color: var(--primary-color);
+}
+
+.action-button.view:hover {
+    background-color: #bfdbfe;
+}
+
+.action-button.update {
+    background-color: #f0fdf4;
+    color: var(--success-color);
+}
+
+.action-button.update:hover {
+    background-color: #dcfce7;
 }
 
 /* Profile Section */
 .profile-container {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 30px;
+    display: flex;
+    justify-content: center;
     margin-top: 20px;
 }
 
-.profile-card, .change-password-card {
-    background: white;
+.profile-card {
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
     padding: 30px;
-    border-radius: 15px;
-    box-shadow: var(--card-shadow);
+    width: 100%;
+    max-width: 800px;
 }
 
 .profile-header {
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     margin-bottom: 30px;
+    text-align: center;
 }
 
 .profile-img-large {
-    width: 150px;
-    height: 150px;
-    border-radius: 50%;
-    margin-bottom: 15px;
+    width: 120px;
+    height: 120px;
+    border-radius: 60px;
     object-fit: cover;
-    border: 4px solid rgba(37, 99, 235, 0.2);
+    margin-bottom: 15px;
+    border: 5px solid #f0f2ff;
 }
 
 .profile-header h3 {
-    font-size: 1.5rem;
-    margin-bottom: 5px;
-    color: var(--text-color);
+    font-size: 24px;
+    margin: 5px 0;
+    color: #2a41e8;
 }
 
 .profile-header p {
-    color: #6b7280;
-    font-size: 1.1rem;
+    color: #666;
+    font-size: 16px;
 }
 
-.profile-form, .password-form {
-    margin-top: 20px;
+.profile-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
 
 .form-group {
@@ -915,6 +1026,12 @@ button.transfer-patient {
 
 .checkbox-group input[type="checkbox"] {
     width: auto;
+}
+
+@media (max-width: 768px) {
+    .profile-form {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Modal Styles */
@@ -1192,4 +1309,209 @@ button.transfer-patient {
     .filters input[type="date"] {
         width: 100%;
     }
+}
+
+/* Message Notifications */
+#message-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.message {
+    padding: 12px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideIn 0.3s ease;
+    min-width: 250px;
+    max-width: 400px;
+}
+
+.message.success {
+    background-color: #e6f8ed;
+    color: #0d7a3c;
+    border-left: 4px solid #0d7a3c;
+}
+
+.message.error {
+    background-color: #fbeaeb;
+    color: #b71c1c;
+    border-left: 4px solid #b71c1c;
+}
+
+.message.info {
+    background-color: #e8f0fe;
+    color: #1967d2;
+    border-left: 4px solid #1967d2;
+}
+
+.message.fade-out {
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Appointment Details Modal */
+.appointment-details-content {
+    background-color: #f9fafb;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.appointment-details-content .detail-section {
+    margin-bottom: 20px;
+}
+
+.appointment-details-content h3 {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 5px;
+}
+
+.appointment-details-content p {
+    margin: 5px 0;
+    display: flex;
+    align-items: center;
+}
+
+.appointment-details-content .label {
+    font-weight: 600;
+    min-width: 120px;
+    color: var(--text-color);
+}
+
+.appointment-details-content .value {
+    color: #4b5563;
+}
+
+.appointment-status-update h3 {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: var(--text-color);
+}
+
+.status-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.status-btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.status-btn i {
+    font-size: 1rem;
+}
+
+.status-btn.scheduled {
+    background-color: #e0f2fe;
+    color: var(--primary-color);
+}
+
+.status-btn.scheduled:hover {
+    background-color: #bfdbfe;
+}
+
+.status-btn.waiting {
+    background-color: #fff7ed;
+    color: var(--warning-color);
+}
+
+.status-btn.waiting:hover {
+    background-color: #fed7aa;
+}
+
+.status-btn.completed {
+    background-color: #f0fdf4;
+    color: var(--success-color);
+}
+
+.status-btn.completed:hover {
+    background-color: #dcfce7;
+}
+
+.status-btn.cancelled {
+    background-color: #f3f4f6;
+    color: #6b7280;
+}
+
+.status-btn.cancelled:hover {
+    background-color: #e5e7eb;
+}
+
+/* Status indicator styles */
+.status-btn.active {
+    position: relative;
+    font-weight: 700;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.status-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
+}
+
+.status-highlight {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: capitalize;
+    font-weight: 500;
+}
+
+.status-highlight.scheduled {
+    background-color: #e0f2fe;
+    color: var(--primary-color);
+}
+
+.status-highlight.waiting {
+    background-color: #fff7ed;
+    color: var(--warning-color);
+}
+
+.status-highlight.completed {
+    background-color: #ecfdf5;
+    color: var(--success-color);
+}
+
+.status-highlight.cancelled {
+    background-color: #f3f4f6;
+    color: #6b7280;
 }
