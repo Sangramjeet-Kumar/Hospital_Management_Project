@@ -32,7 +32,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// Only accept POST requests
 	if r.Method != http.MethodPost {
 		log.Printf("Method not allowed: %s", r.Method)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		sendJSONResponse(w, http.StatusMethodNotAllowed, map[string]interface{}{
+			"success": false,
+			"message": "Method not allowed",
+		})
 		return
 	}
 
@@ -47,7 +50,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	err := json.Unmarshal(bodyBytes, &loginReq)
 	if err != nil {
 		log.Printf("Error decoding request body: %v", err)
-		http.Error(w, fmt.Sprintf("Invalid request body: %v", err), http.StatusBadRequest)
+		sendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": fmt.Sprintf("Invalid request body: %v", err),
+		})
 		return
 	}
 
@@ -57,7 +63,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	if loginReq.EmployeeID == "" || loginReq.Password == "" || loginReq.Role == "" {
 		log.Printf("Missing required fields: EmployeeID=%s, Password=<redacted>, Role=%s",
 			loginReq.EmployeeID, loginReq.Role)
-		http.Error(w, "Employee ID, password, and role are required", http.StatusBadRequest)
+		sendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Employee ID, password, and role are required",
+		})
 		return
 	}
 
@@ -65,7 +74,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	employeeID, err := strconv.Atoi(loginReq.EmployeeID)
 	if err != nil {
 		log.Printf("Invalid employee ID format: %s - %v", loginReq.EmployeeID, err)
-		http.Error(w, "Invalid employee ID format", http.StatusBadRequest)
+		sendJSONResponse(w, http.StatusBadRequest, map[string]interface{}{
+			"success": false,
+			"message": "Invalid employee ID format",
+		})
 		return
 	}
 
@@ -81,7 +93,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	err = database.DB.Ping()
 	if err != nil {
 		log.Printf("Database connection error: %v", err)
-		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		sendJSONResponse(w, http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": "Database connection error",
+		})
 		return
 	}
 
@@ -97,7 +112,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		log.Printf("Database error or invalid credentials: %v", err)
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		sendJSONResponse(w, http.StatusUnauthorized, map[string]interface{}{
+			"success": false,
+			"message": "Invalid credentials",
+		})
 		return
 	}
 
@@ -107,7 +125,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// Check if password matches (using constant-time comparison to prevent timing attacks)
 	if subtle.ConstantTimeCompare([]byte(employee.Password), []byte(loginReq.Password)) != 1 {
 		log.Printf("Password does not match for employee ID: %d", employeeID)
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		sendJSONResponse(w, http.StatusUnauthorized, map[string]interface{}{
+			"success": false,
+			"message": "Invalid credentials",
+		})
 		return
 	}
 
@@ -137,15 +158,18 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Send response
-	w.WriteHeader(http.StatusOK)
 	jsonResponse, err := json.Marshal(response)
 	if err != nil {
 		log.Printf("Error marshalling response: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONResponse(w, http.StatusInternalServerError, map[string]interface{}{
+			"success": false,
+			"message": "Internal server error",
+		})
 		return
 	}
 
 	log.Printf("Response sent: %s", string(jsonResponse))
+	w.WriteHeader(http.StatusOK)
 	w.Write(jsonResponse)
 }
 
@@ -162,6 +186,19 @@ func readAndReplaceBody(r *http.Request) ([]byte, error) {
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
 	return bodyBytes, nil
+}
+
+// Helper function to send JSON responses
+func sendJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Error marshalling JSON response: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.Write(jsonData)
 }
 
 // ChangePassword handles employee password changes

@@ -223,6 +223,10 @@
             const errorMessage = document.getElementById('errorMessage');
             const successMessage = document.getElementById('successMessage');
             
+            // Debug current localStorage
+            console.log('Initial localStorage userData:', localStorage.getItem('userData'));
+            console.log('Initial localStorage employeeId:', localStorage.getItem('employeeId'));
+            
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 
@@ -236,7 +240,7 @@
                 const password = document.getElementById('password').value;
                 
                 // Log values for debugging
-                console.log('Login attempt:', { role, employeeId });
+                console.log('Login attempt:', { role, employeeId, password });
                 
                 try {
                     // Show success message to show something is happening
@@ -275,10 +279,16 @@
                                     employeeId: data.employeeId,
                                     fullName: data.fullName,
                                     role: data.role,
-                                    loggedInAt: new Date().toISOString()
+                                    loggedInAt: new Date().toISOString(),
+                                    success: true // Add success flag explicitly
                                 };
                                 
+                                // Store separately the employeeId for easier access
+                                localStorage.setItem('employeeId', data.employeeId);
                                 localStorage.setItem('userData', JSON.stringify(userData));
+                                
+                                console.log('Stored userData:', JSON.stringify(userData));
+                                console.log('Stored employeeId:', data.employeeId);
                                 
                                 // Show success message
                                 successMessage.textContent = 'Login successful! Redirecting...';
@@ -328,9 +338,9 @@
             });
             
             // Pre-fill with some testing credentials
-            document.getElementById('role').value = 'admin';
-            document.getElementById('employeeId').value = '1001';
-            document.getElementById('password').value = 'admin123';
+            document.getElementById('role').value = 'doctor';
+            document.getElementById('employeeId').value = '2001';
+            document.getElementById('password').value = 'doctor123';
         });
     </script>
 </body>

@@ -29,20 +29,41 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('localStorage employeeId:', localStorage.getItem('employeeId'));
     
     // Try parsing userData
+    let userData = null;
     try {
-        const userData = JSON.parse(localStorage.getItem('userData'));
+        userData = JSON.parse(localStorage.getItem('userData'));
         console.log('Parsed userData:', userData);
     } catch (error) {
         console.error('Error parsing userData:', error);
     }
 
     // Get logged-in employee ID from localStorage (set during login)
-    const employeeId = localStorage.getItem('employeeId') || sessionStorage.getItem('employeeId');
-    console.log('Resolved employeeId:', employeeId);
+    let employeeId = localStorage.getItem('employeeId');
+    console.log('Resolved employeeId from direct localStorage:', employeeId);
+    
+    // If not found directly, try getting from userData object
+    if (!employeeId && userData && userData.employeeId) {
+        employeeId = userData.employeeId;
+        console.log('Resolved employeeId from userData object:', employeeId);
+        // Also store it directly for future use
+        localStorage.setItem('employeeId', employeeId);
+    }
+    
+    // Verify the user is a doctor
+    if (userData && userData.role !== 'doctor') {
+        console.error('User is not a doctor. Role:', userData.role);
+        alert('You do not have permission to access this page. Redirecting to login.');
+        // Redirect to login
+        window.location.href = 'simple_login.html';
+        return;
+    }
     
     if (!employeeId) {
-        console.log('No employeeId found, redirecting to login');
-        // Redirect to login if no employee ID
+        console.error('No employeeId found, redirecting to login');
+        // Clear any existing data
+        localStorage.removeItem('userData');
+        localStorage.removeItem('employeeId');
+        // Redirect to login
         window.location.href = 'simple_login.html';
         return;
     }
