@@ -163,25 +163,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Assign Bed Form Submit
-    if (assignBedForm) {
-        assignBedForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(assignBedForm);
-            const data = Object.fromEntries(formData.entries());
-            
-            try {
-                // In a real app, this would be an API call to assign bed
-                showMessage('Bed assigned successfully', 'success');
-                closeModal(assignBedModal);
-                loadBeds();
-                loadBedStatistics();
-            } catch (error) {
-                showMessage('Failed to assign bed', 'error');
-            }
-        });
-    }
-    
     // Update Status Form Submit
     if (updateStatusForm) {
         updateStatusForm.addEventListener('submit', async (e) => {
@@ -233,12 +214,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage('Failed to update appointment status: ' + error.message, 'error');
             }
         });
-    }
-
-    // Ward selection change handler
-    const wardSelect = document.getElementById('ward');
-    if (wardSelect) {
-        wardSelect.addEventListener('change', loadAvailableBeds);
     }
 
     // Initialize the dashboard
@@ -322,48 +297,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Doctor profile fetch error:', error);
             showMessage(error.message || 'Failed to fetch doctor profile', 'error');
         }
-    }
-
-    function showAssignBedModal(patientName, appointmentId) {
-        const modal = document.getElementById('assignBedModal');
-    const patientNameInput = document.getElementById('patientName');
-        const appointmentIdInput = document.getElementById('appointmentId');
-        
-        patientNameInput.value = patientName;
-        appointmentIdInput.value = appointmentId;
-            
-        // Load available beds for the ward
-        loadAvailableBeds();
-        
-        modal.style.display = 'block';
-    }
-
-    function loadAvailableBeds() {
-        const bedSelect = document.getElementById('bedNumber');
-        const wardSelect = document.getElementById('ward');
-        
-        if (!bedSelect || !wardSelect) return;
-        
-        // Mock available beds data - replace with API call in production
-        const availableBeds = [
-            { id: 1, number: '101', ward: 'General Ward' },
-            { id: 2, number: '102', ward: 'General Ward' },
-            { id: 3, number: '201', ward: 'ICU' },
-            { id: 4, number: '301', ward: 'Emergency' },
-            { id: 5, number: '401', ward: 'Pediatric' }
-        ];
-        
-        bedSelect.innerHTML = '<option value="">Select Bed</option>';
-        const filteredBeds = wardSelect.value ? 
-            availableBeds.filter(bed => bed.ward.toLowerCase() === wardSelect.value) : 
-            availableBeds;
-            
-        filteredBeds.forEach(bed => {
-            const option = document.createElement('option');
-            option.value = bed.id;
-            option.textContent = `Bed ${bed.number}`;
-            bedSelect.appendChild(option);
-        });
     }
 
     function updateAppointmentStatus(appointmentId, currentStatus) {
@@ -552,10 +485,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', '${appointment.status}')">
                         <i class="fas fa-exchange-alt"></i> Update Status
                     </button>
-                    ${appointment.status === 'completed' || appointment.status === 'scheduled' ? 
-                        `<button class="btn-primary" onclick="showAssignBedModal('${appointment.patientName}', '${appointment.id}')">
-                            <i class="fas fa-bed"></i> Assign Bed
-                        </button>` : ''}
                 </div>
             `;
             
@@ -830,15 +759,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         </button>
                     </div>
                 `;
-            } else if (bed.status === 'available') {
-                // Add assign button for available beds
-                bedContent += `
-                    <div class="bed-actions">
-                        <button class="btn-primary" onclick="allocateBed(${bed.id})">
-                            <i class="fas fa-user-plus"></i> Allocate Bed
-                        </button>
-                    </div>
-                `;
             }
             
             bedContent += `</div>`;
@@ -853,161 +773,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log(`View details for patient ${patientId}`);
         // Implement view patient details functionality here
         alert(`Patient details for ID: ${patientId} would be shown in a real implementation.`);
-    }
-
-    // Function to allocate a bed to a patient
-    function allocateBed(bedId) {
-        console.log(`Allocate bed ${bedId}`);
-        // Open a modal to select a patient
-        showPatientSelectionModal(bedId);
-    }
-
-    // Function to show patient selection modal
-    function showPatientSelectionModal(bedId) {
-        // Create modal if it doesn't exist
-        let modal = document.getElementById('allocateBedModal');
-        
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'allocateBedModal';
-            modal.className = 'modal';
-            
-            modal.innerHTML = `
-                <div class="modal-content">
-                    <span class="close" onclick="closeModal(document.getElementById('allocateBedModal'))">&times;</span>
-                    <h2>Allocate Bed to Patient</h2>
-                    <form id="allocateBedForm">
-                        <input type="hidden" id="allocateBedId" value="${bedId}">
-                        <div class="form-group">
-                            <label for="patientSelect">Select Patient</label>
-                            <select id="patientSelect" required>
-                                <option value="">Loading patients...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="admissionDate">Admission Date</label>
-                            <input type="date" id="admissionDate" required value="${new Date().toISOString().split('T')[0]}">
-                        </div>
-                        <div class="form-group">
-                            <label for="expectedDischargeDate">Expected Discharge Date (Optional)</label>
-                            <input type="date" id="expectedDischargeDate">
-                        </div>
-                        <div class="form-group">
-                            <label for="allocationNotes">Notes</label>
-                            <textarea id="allocationNotes" rows="3"></textarea>
-                        </div>
-                        <button type="submit" class="btn-primary">Allocate Bed</button>
-                    </form>
-                </div>
-            `;
-            
-            document.body.appendChild(modal);
-            
-            // Add submit handler
-            document.getElementById('allocateBedForm').addEventListener('submit', handleAllocateBedSubmit);
-        } else {
-            // Update bed ID if modal already exists
-            document.getElementById('allocateBedId').value = bedId;
-        }
-        
-        // Show the modal
-        modal.style.display = 'block';
-        
-        // Load patients for selection
-        loadPatients();
-    }
-
-    // Function to load patients for selection
-    function loadPatients() {
-        const employeeId = localStorage.getItem('employeeId') || sessionStorage.getItem('employeeId');
-        const patientSelect = document.getElementById('patientSelect');
-        
-        if (!patientSelect) return;
-        
-        // Reset options
-        patientSelect.innerHTML = '<option value="">Loading patients...</option>';
-        
-        // Fetch patients from API
-        fetch(`http://localhost:8080/api/patients`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Error loading patients: HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(patients => {
-                patientSelect.innerHTML = '<option value="">Select a patient</option>';
-                
-                if (patients && patients.length > 0) {
-                    patients.forEach(patient => {
-                        const option = document.createElement('option');
-                        option.value = patient.PatientID;
-                        option.textContent = `${patient.FullName} (ID: ${patient.PatientID})`;
-                        patientSelect.appendChild(option);
-                    });
-                } else {
-                    patientSelect.innerHTML = '<option value="">No patients available</option>';
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching patients:', error);
-                patientSelect.innerHTML = '<option value="">Error loading patients</option>';
-            });
-    }
-
-    // Function to handle bed allocation form submission
-    function handleAllocateBedSubmit(event) {
-        event.preventDefault();
-        
-        const bedId = document.getElementById('allocateBedId').value;
-        const patientId = document.getElementById('patientSelect').value;
-        const admissionDate = document.getElementById('admissionDate').value;
-        const dischargeDate = document.getElementById('expectedDischargeDate').value || null;
-        const notes = document.getElementById('allocationNotes').value;
-        const employeeId = localStorage.getItem('employeeId') || sessionStorage.getItem('employeeId');
-        
-        if (!patientId) {
-            alert('Please select a patient');
-            return;
-        }
-        
-        // Prepare data for API call
-        const data = {
-            employeeId: parseInt(employeeId),
-            patientId: parseInt(patientId),
-            bedId: parseInt(bedId),
-            admissionDate: admissionDate,
-            dischargeDate: dischargeDate
-        };
-        
-        console.log('Assigning bed with data:', data);
-        
-        // Call API to assign bed
-        fetch('http://localhost:8080/api/doctor/assign-bed', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(text || `HTTP error! Status: ${response.status}`);
-                });
-            }
-            return response.json();
-        })
-        .then(result => {
-            console.log('Bed assigned successfully:', result);
-            showMessage('Bed assigned successfully', 'success');
-            closeModal(document.getElementById('allocateBedModal'));
-            loadBeds(); // Refresh bed data
-        })
-        .catch(error => {
-            console.error('Error assigning bed:', error);
-            showMessage('Error assigning bed: ' + error.message, 'error');
-        });
     }
 
     // Helper functions
@@ -1046,17 +811,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Make functions available globally
     window.updateAppointmentStatus = updateAppointmentStatus;
-    window.showAssignBedModal = showAssignBedModal;
     window.closeModal = closeModal;
     window.refreshAppointments = function() {
         loadAppointments(getActiveAppointmentStatus());
     };
     window.viewPatientDetails = viewPatientDetails;
-    window.allocateBed = allocateBed;
-    window.showPatientSelectionModal = showPatientSelectionModal;
     window.renderAppointments = renderAppointments;
     window.useMockAppointments = useMockAppointments;
-}); 
+});
 
 // Initialize doctor dashboard with a status check
 document.addEventListener('DOMContentLoaded', function() {
@@ -1242,10 +1004,6 @@ function useMockData(status) {
                     <button class="btn-secondary" onclick="updateAppointmentStatus('${appointment.id}', '${appointment.status}')">
                         <i class="fas fa-exchange-alt"></i> Update Status
                     </button>
-                    ${appointment.status === 'completed' || appointment.status === 'scheduled' ? 
-                        `<button class="btn-primary" onclick="showAssignBedModal('${appointment.patientName}', '${appointment.id}')">
-                            <i class="fas fa-bed"></i> Assign Bed
-                        </button>` : ''}
                 </div>
             `;
             
