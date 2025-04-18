@@ -133,18 +133,19 @@ func GetStaffProfile(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Fetching staff profile for employeeID: %d", employeeID)
 
 	var profile StaffProfile
+	// First try to get a staff profile from the HospitalStaff table
 	err = database.DB.QueryRow(`
 		SELECT 
 			e.EmployeeID, 
 			e.FullName, 
 			e.Email, 
 			e.ContactNumber, 
-			s.Department, 
-			s.Designation,
+			COALESCE(s.Department, '') as Department, 
+			COALESCE(s.Designation, '') as Designation,
 			e.Role
 		FROM 
 			Employees e
-		JOIN 
+		LEFT JOIN 
 			HospitalStaff s ON e.EmployeeID = s.EmployeeID
 		WHERE 
 			e.EmployeeID = ? AND e.Role = 'staff'
@@ -157,6 +158,29 @@ func GetStaffProfile(w http.ResponseWriter, r *http.Request) {
 		&profile.Designation,
 		&profile.Role,
 	)
+
+	// If not found as staff, try to get just the employee record
+	if err == sql.ErrNoRows {
+		log.Printf("No staff profile found for employee ID %d, checking for employee record", employeeID)
+		err = database.DB.QueryRow(`
+			SELECT 
+				EmployeeID, 
+				FullName, 
+				Email, 
+				ContactNumber, 
+				Role
+			FROM 
+				Employees
+			WHERE 
+				EmployeeID = ?
+		`, employeeID).Scan(
+			&profile.EmployeeID,
+			&profile.FullName,
+			&profile.Email,
+			&profile.ContactNumber,
+			&profile.Role,
+		)
+	}
 
 	if err != nil {
 		log.Printf("Error fetching staff profile: %v", err)
@@ -196,51 +220,69 @@ func UpdateStaffProfile(w http.ResponseWriter, r *http.Request) {
 	employeeIDStr := r.URL.Query().Get("employeeId")
 	if employeeIDStr == "" {
 		log.Println("Missing employeeId parameter")
-		http.Error(w, "EmployeeID is required", http.StatusBadRequest)
+		sendJSONError(w, "EmployeeID is required", http.StatusBadRequest)
 		return
 	}
 
 	employeeID, err := strconv.Atoi(employeeIDStr)
 	if err != nil {
 		log.Printf("Invalid employeeId format: %s - %v", employeeIDStr, err)
-		http.Error(w, "Invalid EmployeeID format", http.StatusBadRequest)
+		sendJSONError(w, "Invalid EmployeeID format", http.StatusBadRequest)
 		return
 	}
 
+	// Parse request body
 	var updateReq struct {
 		Email         string `json:"email"`
 		ContactNumber string `json:"contactNumber"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&updateReq); err != nil {
-		log.Printf("Error decoding request: %v", err)
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&updateReq); err != nil {
+		log.Printf("Error decoding request body: %v", err)
 		sendJSONError(w, "Invalid request format", http.StatusBadRequest)
 		return
 	}
-	
-	log.Printf("Updating profile for employeeID: %d with data: %+v", employeeID, updateReq)
+
+	log.Printf("Updating staff profile: ID=%d, Email=%s, ContactNumber=%s", 
+		employeeID, updateReq.Email, updateReq.ContactNumber)
 
 	// Update the employee record
-	_, err = database.DB.Exec(`
-		UPDATE Employees
-		SET Email = ?, ContactNumber = ?
-		WHERE EmployeeID = ? AND Role = 'staff'
+	result, err := database.DB.Exec(`
+		UPDATE Employees 
+		SET Email = ?, ContactNumber = ? 
+		WHERE EmployeeID = ?
 	`, updateReq.Email, updateReq.ContactNumber, employeeID)
 
 	if err != nil {
-		log.Printf("Error updating staff profile: %v", err)
+		log.Printf("Database error updating staff profile: %v", err)
 		sendJSONError(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	response := map[string]interface{}{
-		"success": true,
-		"message": "Staff profile updated successfully",
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error getting rows affected: %v", err)
+		sendJSONError(w, "Database error", http.StatusInternalServerError)
+		return
 	}
+
+	if rowsAffected == 0 {
+		log.Printf("No employee record found with ID: %d", employeeID)
+		sendJSONError(w, "Employee not found", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("Successfully updated staff profile for employee ID: %d", employeeID)
 	
-	// Log and send the response
-	responseBytes, _ := json.Marshal(response)
-	log.Printf("Update response: %s", string(responseBytes))
+	// Return success response
+	response := struct {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+	}{
+		Success: true,
+		Message: "Profile updated successfully",
+	}
 	
 	json.NewEncoder(w).Encode(response)
 }

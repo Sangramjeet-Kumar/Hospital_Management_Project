@@ -39,9 +39,6 @@
             <section id="patient-management" class="tab-content active">
                 <h2>Patient Management</h2>
                 <div class="action-buttons">
-                    <button class="btn-primary" onclick="showPatientRegistrationModal()">
-                        <i class="fas fa-user-plus"></i> New Registration
-                    </button>
                     <button class="btn-primary" onclick="refreshAppointments()">
                         <i class="fas fa-sync-alt"></i> Refresh
                     </button>
@@ -91,12 +88,6 @@
                     </div>
 
                     <div class="bed-management-actions">
-                        <button onclick="showBedAllocationModal()" class="allocate-bed">
-                            <i class="fas fa-bed"></i> Allocate Bed
-                        </button>
-                        <button onclick="showEmergencyAllotmentModal()" class="emergency-allotment">
-                            <i class="fas fa-ambulance"></i> Emergency Allotment
-                        </button>
                         <button onclick="showDischargeModal()" class="process-discharge">
                             <i class="fas fa-sign-out-alt"></i> Process Discharge
                         </button>
@@ -171,9 +162,6 @@
                         <input type="date" id="dateFilter">
                     </div>
                     <div class="action-buttons">
-                        <button class="btn-primary" onclick="showNewAppointmentModal()">
-                            <i class="fas fa-plus"></i> New Appointment
-                        </button>
                         <button class="btn-primary" onclick="refreshAppointments()">
                             <i class="fas fa-sync-alt"></i> Refresh
                         </button>
@@ -600,6 +588,46 @@
                         <i class="fas fa-times-circle"></i> Cancelled
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bed Assignment Modal -->
+    <div id="bedAssignmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Assign Bed to Patient</h2>
+                <span class="close" onclick="closeBedAssignmentModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="bedAssignmentForm">
+                    <div class="form-group">
+                        <label for="patientSelect">Patient</label>
+                        <select id="patientSelect" required>
+                            <option value="" disabled selected>Select Patient</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bedSelect">Bed</label>
+                        <select id="bedSelect" required>
+                            <option value="" disabled selected>Select Bed</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="admissionDate">Admission Date</label>
+                        <input type="date" id="admissionDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dischargeDate">Expected Discharge Date (Optional)</label>
+                        <input type="date" id="dischargeDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="assignmentNotes">Notes</label>
+                        <textarea id="assignmentNotes" rows="2" placeholder="Optional notes about this assignment"></textarea>
+                    </div>
+                    <div id="assignmentErrorMessage" class="error-message"></div>
+                    <button type="submit" class="btn btn-primary">Assign Bed</button>
+                </form>
             </div>
         </div>
     </div>

@@ -78,8 +78,8 @@ func SetupRouter() *mux.Router {
 	r.HandleFunc("/api/staff/patients", handlers.GetStaffPatients).Methods("GET")
 	r.HandleFunc("/api/staff/beds", handlers.GetBedStatus).Methods("GET")
 	r.HandleFunc("/api/staff/appointments", handlers.GetStaffAppointments).Methods("GET")
-	r.HandleFunc("/api/staff/{id}/profile", handlers.GetStaffProfile).Methods("GET")
-	r.HandleFunc("/api/staff/{id}/profile", handlers.UpdateStaffProfile).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/staff/profile", handlers.GetStaffProfile).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/staff/profile/update", handlers.UpdateStaffProfile).Methods("PUT", "OPTIONS")
 
 	// Setup static file server for the frontend files
 	fs := http.FileServer(http.Dir(FrontendDir))
