@@ -270,12 +270,15 @@
                             console.log('Parsed login data:', data);
                             
                             if (data.success) {
-                                // Store user data
-                                localStorage.setItem('userData', JSON.stringify(data));
+                                // Store complete user data
+                                const userData = {
+                                    employeeId: data.employeeId,
+                                    fullName: data.fullName,
+                                    role: data.role,
+                                    loggedInAt: new Date().toISOString()
+                                };
                                 
-                                // Store the employeeId separately for easier access
-                                console.log('Setting employeeId in localStorage:', data.employeeId);
-                                localStorage.setItem('employeeId', data.employeeId.toString());
+                                localStorage.setItem('userData', JSON.stringify(userData));
                                 
                                 // Show success message
                                 successMessage.textContent = 'Login successful! Redirecting...';
