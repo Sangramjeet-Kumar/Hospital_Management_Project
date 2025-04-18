@@ -1981,11 +1981,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p><strong>Ward:</strong> ${ward}</p>
                         <p><strong>Type:</strong> ${type}</p>
                     </div>
-                    <div class="bed-actions">
-                        <button class="allocate-btn" onclick="openBedAssignmentModal(null, null, ${bedId})">
-                            <i class="fas fa-user-plus"></i> Allocate Bed
-                        </button>
-                    </div>
                 `;
             } else {
                 // Maintenance or other status
