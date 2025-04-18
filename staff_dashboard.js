@@ -175,9 +175,50 @@ document.addEventListener('DOMContentLoaded', function() {
         this.reset();
     });
 
-    document.getElementById('transferForm')?.addEventListener('submit', function(e) {
+    document.getElementById('transferForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
-        transferBed(new FormData(this));
+        const formData = new FormData(this);
+        formData.delete('reason'); // Remove reason if present
+        formData.append('fromBedId', document.getElementById('currentBedNumber').value);
+        // Get staffId from localStorage
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const staffId = userData.employeeId || null;
+        const transferData = {
+            employeeId: staffId, // REQUIRED by backend
+            patientId: parseInt(formData.get('patientId')),
+            fromBedId: parseInt(formData.get('fromBedId')),
+            newBedId: parseInt(formData.get('toBedId')) // Backend expects 'newBedId'
+        };
+        // Validate
+        if (!transferData.employeeId || !transferData.patientId || !transferData.fromBedId || !transferData.newBedId) {
+            showMessage('Please fill in all required fields', 'error');
+            return;
+        }
+        try {
+            showMessage('Transferring patient...', 'info');
+            // Use DOCTOR endpoint for transfer (since /api/staff/transfer-bed does not exist)
+            const response = await fetch('http://localhost:8080/api/doctor/transfer-bed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(transferData)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                showMessage(err.message || 'Transfer failed', 'error');
+                return;
+            }
+            showMessage('Patient transferred successfully', 'success');
+            document.getElementById('transferModal').style.display = 'none';
+            // Refresh bed management section (reload data)
+            if (typeof loadBedManagementSection === 'function') {
+                loadBedManagementSection();
+            } else {
+                // fallback: reload page
+                location.reload();
+            }
+        } catch (error) {
+            showMessage('Error transferring patient', 'error');
+        }
     });
     
     document.getElementById('bedAllocationForm')?.addEventListener('submit', function(e) {
@@ -218,11 +259,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('patientRegistrationModal').style.display = 'block';
     };
     
-    window.showEmergencyPatientModal = function() {
-        document.getElementById('emergencyPatientModal').style.display = 'block';
-        populateSampleDoctorSelect('emergencyDoctorSelect');
-    };
-    
     // Modified function to use the bed assignment modal instead of the old allocation modal
     window.showBedAllocationModal = function(patientId, patientName) {
         // Simply call the openBedAssignmentModal function with the patient info
@@ -241,11 +277,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('dischargeBedNumber').value = 'ICU-103';
     };
     
-    window.showTransferModal = function() {
+    window.showTransferModal = async function() {
         document.getElementById('transferModal').style.display = 'block';
-        populateSamplePatientSelect('transferPatientSelect');
-        document.getElementById('currentBedNumber').value = 'GEN-205';
-        populateSampleBedSelect('transferBedSelect');
+        await populateTransferPatientSelect();
+        // Clear bed/ward fields
+        document.getElementById('currentBedNumber').value = '';
+        document.getElementById('transferWardSelect').value = '';
+        document.getElementById('transferBedSelect').innerHTML = '<option value="">Select Bed</option>';
+        // Hide reason textbox if present
+        const reasonBox = document.getElementById('transferReason');
+        if (reasonBox) reasonBox.parentElement.style.display = 'none';
     };
     
     window.showNewAppointmentModal = function() {
@@ -1546,7 +1587,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMessage(`Patient status updated to ${status}`, 'success');
                 
                 // Refresh the patient list
-                loadPatients(); // Make sure this function exists and works
+                loadPatients();
                 
                 // Close the modal
                 document.getElementById('appointmentDetailsModal').style.display = 'none';
@@ -1557,7 +1598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // For demo purposes, simulate a successful update
                 setTimeout(() => {
                     showMessage(`Patient status updated to ${status}`, 'success');
-                    loadPatients(); // Make sure this function exists
+                    loadPatients();
                     document.getElementById('appointmentDetailsModal').style.display = 'none';
                 }, 500);
             });
@@ -1906,10 +1947,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 { id: 6, bedNumber: '6', ward: 'General', type: 'General', status: 'available' },
                 { id: 7, bedNumber: '7', ward: 'General', type: 'General', status: 'available' },
                 { id: 8, bedNumber: '8', ward: 'General', type: 'General', status: 'available' },
-                { id: 9, bedNumber: '9', ward: 'ICU', type: 'ICU', status: 'occupied', patientName: 'Ravi Kumar', patientId: '12', admissionDate: '2023-04-13' },
-                { id: 10, bedNumber: '10', ward: 'ICU', type: 'ICU', status: 'available' },
-                { id: 11, bedNumber: '11', ward: 'Emergency', type: 'Emergency', status: 'maintenance' },
-                { id: 12, bedNumber: '12', ward: 'Emergency', type: 'Emergency', status: 'occupied', patientName: 'Alok Singh', patientId: '15', admissionDate: '2023-04-15' }
+                { id: 9, bed_number: 'ICU-101', ward: 'ICU', type: 'ICU', status: 'occupied', patientName: 'Ravi Kumar', patientId: '12', admissionDate: '2023-04-13' },
+                { id: 10, bed_number: 'ICU-102', ward: 'ICU', type: 'ICU', status: 'available' },
+                { id: 11, bed_number: 'EMG-101', ward: 'Emergency', type: 'Emergency', status: 'maintenance' },
+                { id: 12, bed_number: 'EMG-102', ward: 'Emergency', type: 'Emergency', status: 'occupied', patientName: 'Alok Singh', patientId: '15', admissionDate: '2023-04-15' }
             ];
         }
         
@@ -2508,9 +2549,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Filter patients who don't have active bed assignments
                         let availablePatients = patients;
                         if (patientsWithBeds.size > 0) {
-                            availablePatients = patients.filter(patient => 
-                                !patientsWithBeds.has(String(patient.patient_id))
-                            );
+                            availablePatients = patients.filter(p => !patientsWithBeds.has(String(p.patient_id)));
                         }
                         
                         console.log(`After filtering, ${availablePatients.length} patients are available for bed assignment`);
@@ -2752,5 +2791,146 @@ document.addEventListener('DOMContentLoaded', function() {
             // Fallback to alert if element not found
             alert('Error: ' + message);
         }
+    }
+
+    // --- Transfer Patient Modal Logic ---
+    window.showTransferModal = async function() {
+        document.getElementById('transferModal').style.display = 'block';
+        await populateTransferPatientSelect();
+        // Clear bed/ward fields
+        document.getElementById('currentBedNumber').value = '';
+        document.getElementById('transferWardSelect').value = '';
+        document.getElementById('transferBedSelect').innerHTML = '<option value="">Select Bed</option>';
+        // Hide reason textbox if present
+        const reasonBox = document.getElementById('transferReason');
+        if (reasonBox) reasonBox.parentElement.style.display = 'none';
+    };
+
+    // Fetch and populate patients with a current bed assignment
+    async function populateTransferPatientSelect() {
+        const select = document.getElementById('transferPatientSelect');
+        select.innerHTML = '<option value="">Select Patient</option>';
+        try {
+            const [patientsRes, assignmentsRes] = await Promise.all([
+                fetch('http://localhost:8080/api/patients'),
+                fetch('http://localhost:8080/api/beds/assignments')
+            ]);
+            if (!patientsRes.ok || !assignmentsRes.ok) throw new Error('Failed to fetch patient or assignment data');
+            const patients = await patientsRes.json();
+            const assignments = await assignmentsRes.json();
+            // Filter assignments to only current (not discharged)
+            const currentAssignments = assignments.filter(a => a.status === 'current' && !a.dischargeDate);
+            // Map patientId => assignment
+            const assignmentMap = {};
+            currentAssignments.forEach(a => { assignmentMap[a.patientID] = a; });
+            // Only include patients with a current assignment
+            const admittedPatients = patients.filter(p => assignmentMap[p.patient_id]);
+            admittedPatients.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.patient_id;
+                opt.textContent = `${p.full_name} (Bed #${assignmentMap[p.patient_id].bedID})`;
+                select.appendChild(opt);
+            });
+        } catch (err) {
+            select.innerHTML = '<option value="">Error loading patients</option>';
+            showMessage('Could not load admitted patients for transfer', 'error');
+        }
+    }
+
+    // When patient is selected, show bed/admission info and enable transfer
+    const transferPatientSelect = document.getElementById('transferPatientSelect');
+    if (transferPatientSelect) {
+        transferPatientSelect.addEventListener('change', async function() {
+            const patientId = this.value;
+            if (!patientId) return;
+            // Fetch assignments for this patient
+            try {
+                const res = await fetch('http://localhost:8080/api/beds/assignments');
+                if (!res.ok) throw new Error('Failed to fetch assignments');
+                const assignments = await res.json();
+                const assignment = assignments.find(a => a.patientID == patientId && a.status === 'current' && !a.dischargeDate);
+                if (assignment) {
+                    document.getElementById('currentBedNumber').value = assignment.bedID;
+                    document.getElementById('transferWardSelect').value = assignment.bedType ? assignment.bedType.toLowerCase() : '';
+                } else {
+                    document.getElementById('currentBedNumber').value = '';
+                }
+            } catch (err) {
+                document.getElementById('currentBedNumber').value = '';
+            }
+        });
+    }
+
+    // When ward is selected, fetch available beds for that ward
+    const transferWardSelect = document.getElementById('transferWardSelect');
+    if (transferWardSelect) {
+        transferWardSelect.addEventListener('change', async function() {
+            const ward = this.value;
+            const bedSelect = document.getElementById('transferBedSelect');
+            bedSelect.innerHTML = '<option value="">Select Bed</option>';
+            if (!ward) return;
+            try {
+                const res = await fetch('http://localhost:8080/api/beds/inventory');
+                if (!res.ok) throw new Error('Failed to fetch beds');
+                const beds = await res.json();
+                // Only available beds in selected ward
+                const availableBeds = beds.filter(b => b.status === 'available' && b.bedType.toLowerCase() === ward);
+                availableBeds.forEach(bed => {
+                    const opt = document.createElement('option');
+                    opt.value = bed.bedID;
+                    opt.textContent = `Bed #${bed.bedID} - ${bed.bedType}`;
+                    bedSelect.appendChild(opt);
+                });
+            } catch (err) {
+                bedSelect.innerHTML = '<option value="">No beds available</option>';
+            }
+        });
+    }
+
+    // On transfer form submit, call transferBed
+    const transferForm = document.getElementById('transferForm');
+    if (transferForm) {
+        transferForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            // Add fromBedId from currentBedNumber
+            formData.append('fromBedId', document.getElementById('currentBedNumber').value);
+            formData.delete('reason'); // Remove reason if present
+            const transferData = {
+                patientId: parseInt(formData.get('patientId')),
+                fromBedId: parseInt(formData.get('fromBedId')),
+                toBedId: parseInt(formData.get('toBedId'))
+            };
+            // Validate
+            if (!transferData.patientId || !transferData.fromBedId || !transferData.toBedId) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+            try {
+                showMessage('Transferring patient...', 'info');
+                // Use DOCTOR endpoint for transfer (since /api/staff/transfer-bed does not exist)
+                const response = await fetch('http://localhost:8080/api/doctor/transfer-bed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(transferData)
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    showMessage(err.message || 'Transfer failed', 'error');
+                    return;
+                }
+                showMessage('Patient transferred successfully', 'success');
+                document.getElementById('transferModal').style.display = 'none';
+                // Refresh bed management section (reload data)
+                if (typeof loadBedManagementSection === 'function') {
+                    loadBedManagementSection();
+                } else {
+                    // fallback: reload page
+                    location.reload();
+                }
+            } catch (error) {
+                showMessage('Error transferring patient', 'error');
+            }
+        });
     }
 });
